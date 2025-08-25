@@ -1,0 +1,42 @@
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+src/tools/tokens.json
+.env
+# Python standaard
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.log
+*.sqlite3
+*.db
+*.pot
+*.mo
+*.coverage
+.coverage.*
+.cache/
+*.tmp
+*.bak
+*.swp
+*.swo
+.DS_Store
+# Virtualenv
+venv/
+.env/
+.envrc
+# Jupyter
+.ipynb_checkpoints/
+# VSCode
+.vscode/
+# Poetry
+poetry.lock
+# Test output
+htmlcov/
+# MacOS
+*.DS_Store

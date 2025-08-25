@@ -1,0 +1,15 @@
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+from config.search_agent_constants import SEARCH_AGENT_NAME, SEARCH_AGENT_SYSTEM_MESSAGE
+from tools.google_grounding_tool import GoogleGroundingTool
+
+
+class SearchAgent(AssistantAgent):
+    def __init__(self, model_client: OpenAIChatCompletionClient):
+        super().__init__(
+            name=SEARCH_AGENT_NAME,
+            model_client=model_client,
+            system_message=SEARCH_AGENT_SYSTEM_MESSAGE,
+            tools=[GoogleGroundingTool().run_crypto_search],
+        )
