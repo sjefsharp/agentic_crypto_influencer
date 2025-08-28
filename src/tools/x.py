@@ -1,135 +1,110 @@
-import base64
-import json
-import os
-import requests
+"""
+Module for posting messages to X (Twitter) using OAuth2 authentication.
+Handles access token refresh and error management.
+"""
 
-from config.key_constants import (
-    X_ENDPOINT,
-    X_TWEETS_ENDPOINT,
-)
+import logging
+from typing import Any, Dict, List, Optional
+
 from error_management.error_manager import ErrorManager
+from tools.oauth_handler import OAuthHandler
+from tools.post_handler import PostHandler
+from tools.redis_handler import RedisHandler
+from tools.trends_handler import TrendsHandler
+
+from config.key_constants import X_USER_ID
 
 
 class X:
+    """
+    Class for interacting with the X (Twitter) API.
+
+    Handles authentication, token refresh, and posting messages.
+    """
+
     def __init__(self):
-        self.access_token = self._load_access_token()
-        self.x_endpoint = f"{X_ENDPOINT}{X_TWEETS_ENDPOINT}"
+        """
+        Initialize X API client.
+        """
+        # Initialize Redis client
+        self.redis_client: Optional[Any] = RedisHandler().redis_client
 
-    def _load_access_token(self):
-        """Loads the access token from tokens.json."""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        token_path = os.path.join(script_dir, "tokens.json")
+        self.oauth_handler = OAuthHandler()
+        self.access_token = self.oauth_handler.refresh_access_token()
+        access_token_str = self.access_token.get("access_token", "")
+        if not access_token_str:
+            raise RuntimeError("Access token is missing or invalid.")
+        self.post_handler = PostHandler(access_token_str)
+        self.trends_handler = TrendsHandler(access_token_str)
 
-        if not os.path.exists(token_path):
-            raise FileNotFoundError(
-                "tokens.json not found. Please run callback_server.py first to authenticate."
-            )
-        with open(token_path, "r") as f:
-            token_data = json.load(f)
-            access_token = token_data.get("access_token")
-            if not access_token:
-                raise ValueError("Access token not found in tokens.json.")
-            return access_token
+        logging.basicConfig(level=logging.INFO)
 
-    def _load_refresh_token(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        token_path = os.path.join(script_dir, "tokens.json")
-        with open(token_path, "r") as f:
-            token_data = json.load(f)
-            refresh_token = token_data.get("refresh_token")
-            if not refresh_token:
-                raise ValueError("Refresh token not found in tokens.json.")
-            return refresh_token
+    def post(self, post: str) -> dict[str, Any]:
+        """
+        Post a message to X (Twitter).
 
-    def _save_tokens(self, access_token: str, refresh_token: str) -> None:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        token_path = os.path.join(script_dir, "tokens.json")
-        with open(token_path, "r") as f:
-            token_data = json.load(f)
-        token_data["access_token"] = access_token
-        token_data["refresh_token"] = refresh_token
-        with open(token_path, "w") as f:
-            json.dump(token_data, f, indent=4)
+        Args:
+            post (str): The message to post. Must be 1-280 characters.
 
-    def _refresh_access_token(self):
-        from config.key_constants import X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI
+        Returns:
+            dict: The JSON response from the X API.
 
-        TOKEN_URL = "https://api.x.com/2/oauth2/token"
-        refresh_token = self._load_refresh_token()
-        from typing import Dict
+        Raises:
+            ValueError: If the post is empty or too long.
+            RuntimeError: If posting fails.
+            Exception: If the API returns a non-201 status code.
+        """
+        return self.post_handler.post_message(post)
 
-        token_params: Dict[str, str] = {
-            "refresh_token": str(refresh_token),
-            "grant_type": "refresh_token",
-            "client_id": str(X_CLIENT_ID),
-            "redirect_uri": str(X_REDIRECT_URI),
-        }
-        basic_auth = base64.b64encode(
-            f"{X_CLIENT_ID}:{X_CLIENT_SECRET}".encode()
-        ).decode()
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Basic {basic_auth}",
-        }
-        response = requests.post(TOKEN_URL, data=token_params, headers=headers)
-        response.raise_for_status()
-        tokens = response.json()
-        access_token = tokens.get("access_token")
-        refresh_token = tokens.get("refresh_token", refresh_token)
-        self._save_tokens(access_token, refresh_token)
-        self.access_token = access_token
+    def get_personalized_trends(
+        self, user_id: str, max_results: int = 10, exclude: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Fetch personalized trends for a user from the X API.
 
-    def post(self, post: str):
-        if not post or len(post) > 280:
-            raise ValueError("Post must be between 1 and 280 characters")
+        Args:
+            user_id (str): The X user id to fetch personalized trends for.
+            max_results (int): Maximum number of trend results to return.
+            exclude (Optional[List[str]]): Optional list of trend types to exclude.
 
-        headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json",
-        }
-        payload = {"text": post}
+        Returns:
+            Dict[str, Any]: Parsed JSON response from the trends endpoint.
 
-        try:
-            response = requests.post(
-                self.x_endpoint,
-                json=payload,
-                headers=headers,
-            )
-            if response.status_code == 401:
-                # Refresh token and retry
-                self._refresh_access_token()
-                headers["Authorization"] = f"Bearer {self.access_token}"
-                response = requests.post(
-                    self.x_endpoint,
-                    json=payload,
-                    headers=headers,
-                )
-        except Exception as e:
-            raise RuntimeError(
-                f"An error occurred while posting on X. Message: {str(e)}"
-            )
-
-        if response.status_code != 201:
-            raise Exception(
-                f"Request returned an error: {response.status_code} {response.text}"
-            )
-
-        try:
-            return response.json()
-        except Exception as e:
-            raise RuntimeError(
-                f"An error occurred while processing the response from X. Message: {str(e)}"
-            )
+        Raises:
+            RuntimeError: For network/refresh errors.
+            Exception: For non-200 responses.
+        """
+        return self.trends_handler.get_personalized_trends(
+            user_id, max_results, exclude
+        )
 
 
 def main():
+    """
+    Main entry point for posting a message to X.
+    Handles error management and prints results.
+    """
     error_manager = ErrorManager()
     try:
         x = X()
         post = "Post"
-        result = x.post(post)
-        print("--- Results ---")
+        result: dict[str, Any] = x.post(post)
+        print("--- Post Results ---")
         print(result)
+
+        # Try fetching personalized trends if user id provided via env
+        user_id = X_USER_ID
+        if user_id:
+            try:
+                trends = x.get_personalized_trends(user_id=user_id, max_results=10)
+                print("--- Personalized Trends ---")
+                print(trends)
+            except Exception as e:
+                logging.error("Failed to fetch personalized trends: %s", str(e))
+                # Surface via error manager as well
+                print(error_manager.handle_error(e))
+        else:
+            logging.info("X_USER_ID not set; skipping personalized trends fetch")
     except (ValueError, RuntimeError) as e:
         error_message = error_manager.handle_error(e)
         print(error_message)

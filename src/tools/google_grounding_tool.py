@@ -1,19 +1,16 @@
 import logging
-import os
 
-from dotenv import load_dotenv
 from google import genai
 from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
 
 from config.model_constants import MODEL_ID
 from error_management.error_manager import ErrorManager
+from config.key_constants import GOOGLE_API_KEY
 
 
 class GoogleGroundingTool:
     def __init__(self):
-        load_dotenv()
-
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.api_key = GOOGLE_API_KEY
 
         if not self.api_key:
             raise ValueError("Google API key is missing")

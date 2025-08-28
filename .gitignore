@@ -1,6 +1,5 @@
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
-src/tools/tokens.json
 .env
 # Python standaard
 __pycache__/

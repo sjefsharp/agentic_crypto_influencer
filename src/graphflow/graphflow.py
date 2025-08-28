@@ -1,7 +1,8 @@
 import asyncio
+
 from autogen_agentchat.conditions import TextMentionTermination
-from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.teams import DiGraphBuilder, GraphFlow
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 from flask import json
 from json import JSONDecodeError
 
@@ -11,7 +12,7 @@ from agents.summary_agent import SummaryAgent
 from config.key_constants import GOOGLE_GENAI_API_KEY
 from config.model_constants import MODEL_ID
 from error_management.error_manager import ErrorManager
-import os
+from tools.redis_handler import RedisHandler  # Corrected import path
 
 error_manager = ErrorManager()
 
@@ -33,55 +34,45 @@ async def main():
         builder.add_node(summary_agent)
         builder.add_node(publish_agent)
         builder.add_edge(search_agent, summary_agent)
-        builder.add_edge(
-            summary_agent,
-            publish_agent,
-            condition=lambda msg: "Post must be between 1 and 280 characters"
-            not in msg.to_model_text(),
-        )
+        builder.add_edge(summary_agent, publish_agent)
 
         builder.set_entry_point(search_agent)
 
         graph = builder.build()
 
-        termination_condition = TextMentionTermination("APPROVE")
+        termination_condition = TextMentionTermination("!PUBLISHED!")
 
         flow = GraphFlow(
             participants=builder.get_participants(),
             graph=graph,
             termination_condition=termination_condition,
         )
-        team_state_path = "src/graphflow/team_state.json"
-        team_state = None
+        redis_handler = RedisHandler()
 
-        if os.path.exists(team_state_path):
-            try:
-                with open(team_state_path, "r") as f:
-                    team_state = json.load(f)
-            except (JSONDecodeError, IOError):
-                team_state = None
+        team_state = None
 
         if team_state:
             await flow.load_state(team_state)
+        else:
+            # Load team_state from Redis if available
+            redis_team_state = redis_handler.get("team_state")
+            if redis_team_state:
+                try:
+                    team_state = json.loads(redis_team_state)
+                except JSONDecodeError:
+                    team_state = None
 
         stream = flow.run_stream(
-            task="""
-            Find the latest breaking cryptocurrency news. 
-            Filter out any content that has already been published. 
-            Summarize the most relevant news into a concise post of no more than 280 characters. 
-            The final post must be published to the X platform.
-            """
+            task="Process the latest crypto news and publish a compliant, high-quality tweet to X."
         )
 
         async for event in stream:
             print(event)
 
         team_state = await flow.save_state()
-        team_state_path = "src/graphflow/team_state.json"
         if team_state:
-            os.makedirs(os.path.dirname(team_state_path), exist_ok=True)
-            with open(team_state_path, "w") as f:
-                json.dump(team_state, f)
+            # Save team_state to Redis
+            redis_handler.set("team_state", json.dumps(team_state))
     except Exception as e:
         error_message = error_manager.handle_error(e)
         print(error_message)

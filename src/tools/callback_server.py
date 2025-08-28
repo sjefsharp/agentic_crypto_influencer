@@ -1,13 +1,15 @@
-import json
-import os
-import requests
 import base64
-import urllib.parse
-from flask import Flask, request
-from threading import Thread
-from config.key_constants import X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI, X_SCOPES
+import json
 import logging
+import urllib.parse
+from threading import Thread
+
+import requests
+from flask import Flask, request
+
+from config.key_constants import X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI, X_SCOPES
 from error_management.error_manager import ErrorManager
+from tools.redis_handler import RedisHandler  # Corrected import for RedisHandler
 
 errormanager = ErrorManager()
 
@@ -46,22 +48,15 @@ def get_and_save_tokens(code: str):
 
     logging.info("Tokens succesvol verkregen!")
 
-    refresh_token = str(tokens.get("refresh_token", ""))
     access_token = str(tokens.get("access_token", ""))
-    token_data = {
-        "client_id": X_CLIENT_ID,
-        "client_secret": X_CLIENT_SECRET,
-        "refresh_token": refresh_token,
-        "access_token": access_token,
-    }
+    refresh_token = str(tokens.get("refresh_token", ""))
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    token_path = os.path.join(script_dir, "tokens.json")
-
-    with open(token_path, "w") as f:
-        json.dump(token_data, f, indent=4)
-
-    logging.info("Refresh token opgeslagen in tokens.json.")
+    redis_handler = RedisHandler()
+    redis_handler.set(
+        "token",
+        json.dumps({"access_token": access_token, "refresh_token": refresh_token}),
+    )
+    logging.info("Access and refresh tokens opgeslagen in Redis.")
 
     # Sluit de server netjes af na succesvolle verwerking
     try:
@@ -75,10 +70,10 @@ def get_and_save_tokens(code: str):
 @app.route("/shutdown", methods=["POST"])
 def shutdown():
     """Sluit de Flask-server op een schone manier af."""
-    func = request.environ.get("werkzeug.server.shutdown")
-    if func is None:
-        raise RuntimeError("Niet draaiend met de Werkzeug-ontwikkelserver")
-    func()
+    terminate_func = request.environ.get("flask._terminate_server")
+    if terminate_func is None:
+        raise RuntimeError("De server ondersteunt geen schone afsluiting.")
+    terminate_func()
     return "Server shutting down..."
 
 
@@ -101,6 +96,31 @@ def callback():
         )
     else:
         return "Fout: Geen autorisatiecode gevonden.", 400
+
+
+@app.route("/test_authorization", methods=["GET"])
+def test_authorization():
+    """Controleer of de access en refresh tokens correct zijn opgeslagen in Redis."""
+    redis_handler = RedisHandler()
+    tokens = redis_handler.get("token")
+
+    if not tokens:
+        return "Geen tokens gevonden in Redis.", 404
+
+    try:
+        tokens_data = json.loads(tokens)
+        access_token = tokens_data.get("access_token")
+        refresh_token = tokens_data.get("refresh_token")
+
+        if not access_token or not refresh_token:
+            return "Tokens zijn onvolledig opgeslagen in Redis.", 400
+
+        return (
+            f"Access Token: {access_token}<br>Refresh Token: {refresh_token}",
+            200,
+        )
+    except json.JSONDecodeError:
+        return "Fout bij het decoderen van tokens uit Redis.", 500
 
 
 if __name__ == "__main__":
