@@ -39,3 +39,5 @@ poetry.lock
 htmlcov/
 # MacOS
 *.DS_Store
+# Exclude Codacy configuration folder
+.codacy/
