@@ -108,3 +108,6 @@ htmlcov/
 
 # Codacy
 .codacy/
+
+# Executable scripts (but keep the source)
+check_env.py

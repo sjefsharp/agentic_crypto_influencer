@@ -16,8 +16,40 @@ Automate crypto influencer tasks with Python, X (Twitter) API, and Google GenAI.
 
 ## Configuration
 
-- Fill in your API keys in `.env`.
-- Tokens are now stored in Redis.
+### Environment Variables Setup
+
+1. **Copy the example file:**
+
+   ```sh
+   cp .env.example .env
+   ```
+
+2. **Fill in your API keys in `.env`:**
+
+   - **X (Twitter) API**: Get credentials from [X Developer Portal](https://developer.x.com/)
+   - **Google API**: Get credentials from [Google Cloud Console](https://console.cloud.google.com/)
+   - **Bitvavo API**: Get credentials from [Bitvavo](https://bitvavo.com/)
+   - **Redis**: Default is `redis://localhost:6379`
+
+3. **Verify your configuration:**
+
+   ```sh
+   python check_env.py
+   ```
+
+4. **Important Security Notes:**
+   - Never commit the `.env` file to version control
+   - The `.env` file is already in `.gitignore`
+   - Share `.env.example` with team members (contains placeholder values)
+   - Each developer should create their own `.env` file
+
+### Required API Keys
+
+- `X_API_CLIENT_ID`, `X_API_CLIENT_SECRET`, `X_API_KEY`, `X_API_SECRET`
+- `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`, `X_BEARER_TOKEN`
+- `GOOGLE_API_KEY`, `GOOGLE_GENAI_API_KEY`, `GOOGLE_CSE_ID`
+- `BITVAVO_API_KEY`, `BITVAVO_API_SECRET`
+- `REDIS_URL` (optional, defaults to localhost)
 
 ## Testing
 
