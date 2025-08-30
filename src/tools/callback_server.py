@@ -7,7 +7,12 @@ from threading import Thread
 import requests
 from flask import Flask, request
 
-from config.key_constants import X_CLIENT_ID, X_CLIENT_SECRET, X_REDIRECT_URI, X_SCOPES
+from config.key_constants import (
+    X_CLIENT_ID,
+    X_CLIENT_SECRET,
+    X_REDIRECT_URI,
+    X_SCOPES,
+)
 from error_management.error_manager import ErrorManager
 from tools.redis_handler import RedisHandler  # Corrected import for RedisHandler
 

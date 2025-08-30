@@ -1,5 +1,6 @@
-from python_bitvavo_api.bitvavo import Bitvavo  # type: ignore
 from typing import Any, Dict, Optional
+
+from python_bitvavo_api.bitvavo import Bitvavo  # type: ignore
 
 from config.key_constants import BITVAVO_API_KEY, BITVAVO_API_SECRET
 
@@ -21,8 +22,8 @@ class BitvavoHandler:
             raise RuntimeError(f"Failed to fetch market data: {str(e)}")
 
 
-# Example usage:
-if __name__ == "__main__":
+def main():
+    """Main function for command-line usage."""
     bitvavo = BitvavoHandler()
 
     # Fetch and print market data for a specific market (e.g., 'BTC-USDC')
@@ -32,3 +33,8 @@ if __name__ == "__main__":
         print(f"Market Data for {market}:", market_data)
     except RuntimeError as e:
         print(e)
+
+
+# Example usage:
+if __name__ == "__main__":
+    main()

@@ -7,7 +7,8 @@ class ErrorManager:
         return "An unexpected error occurred. Please try again later."
 
 
-if __name__ == "__main__":
+def main():
+    """Main function that demonstrates error handling."""
     error_manager = ErrorManager()
 
     try:
@@ -15,3 +16,7 @@ if __name__ == "__main__":
     except Exception as e:
         user_message = error_manager.handle_error(e)
         print(user_message)
+
+
+if __name__ == "__main__":
+    main()

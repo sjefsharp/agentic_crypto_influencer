@@ -1,15 +1,30 @@
 import logging
 
-from google import genai
-from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
-
+from config.key_constants import GOOGLE_API_KEY
 from config.model_constants import MODEL_ID
 from error_management.error_manager import ErrorManager
-from config.key_constants import GOOGLE_API_KEY
+
+# Conditional imports for optional dependencies
+try:
+    from google import genai
+    from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
+
+    google_genai_available = True
+except ImportError:
+    google_genai_available = False
+    genai = None
+    GenerateContentConfig = None
+    GoogleSearch = None
+    Tool = None
 
 
 class GoogleGroundingTool:
     def __init__(self):
+        if not google_genai_available:
+            raise ImportError(
+                "Google GenAI library is not installed. Please install it with: pip install google-genai"
+            )
+
         self.api_key = GOOGLE_API_KEY
 
         if not self.api_key:
@@ -41,6 +56,7 @@ class GoogleGroundingTool:
 
 
 def main():
+    """Main function for command-line usage."""
     error_manager = ErrorManager()
     try:
         tool = GoogleGroundingTool()
@@ -57,5 +73,6 @@ def main():
         print(error_message)
 
 
+# Example usage:
 if __name__ == "__main__":
     main()

@@ -5,18 +5,19 @@ import logging
 import os
 import re
 from typing import Any, Dict
+
 from requests_oauthlib import OAuth2Session
 
-from .redis_handler import RedisHandler
 from config.key_constants import (
+    X_AUTHORIZE_ENDPOINT,
     X_CLIENT_ID,
     X_CLIENT_SECRET,
     X_REDIRECT_URI,
     X_SCOPES,
-    X_URL,
-    X_AUTHORIZE_ENDPOINT,
     X_TOKEN_ENDPOINT,
+    X_URL,
 )
+from tools.redis_handler import RedisHandler
 
 
 class OAuthHandler:

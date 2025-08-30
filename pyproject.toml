@@ -6,7 +6,7 @@ authors = [
     {name = "Sjef Jenniskens",email = "14937399+sjefsharp@users.noreply.github.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<4.0"
 dependencies = [
     "ruff (>=0.12.10,<0.13.0)",
     "black (>=25.1.0,<26.0.0)",
@@ -25,18 +25,80 @@ dependencies = [
     "tiktoken (>=0.11.0,<0.12.0)",
     "flask (>=3.1.2,<4.0.0)",
     "types-requests (>=2.32.4.20250809,<3.0.0.0)",
-    "pytest (>=8.4.1,<9.0.0)",
     "types-redis (>=4.6.0.20241004,<5.0.0.0)",
     "redis (>=6.4.0,<7.0.0)",
     "python-bitvavo-api (>=1.4.3,<2.0.0)",
+    "types-requests-oauthlib (>=2.0.0.20250809,<3.0.0.0)",
+    "cryptography (>=45.0.6,<46.0.0)",
+    "rsa (>=4.7,<4.9)",
 ]
 
-[tool.poetry]
-packages = [{include = "agentic_crypto_influencer", from = "src"}]
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+src_paths = ["src"]
+known_first_party = ["agentic_crypto_influencer", "src"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 types-requests = "^2.32.4.20250809"
+pytest = "^8.4.1"
+pytest-cov = "^6.0.0"
+pytest-mock = "^3.14.1"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--import-mode=importlib",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=80"
+]
+pythonpath = ["src"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "smoke: marks tests as smoke tests"
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+    "*/.git/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

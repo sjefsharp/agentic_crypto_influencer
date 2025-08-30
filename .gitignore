@@ -1,6 +1,12 @@
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
 .env
+.env.*
+.envrc
+.env.local
+.env.production
+.env.staging
+
 # Python standaard
 __pycache__/
 *.py[cod]
@@ -17,27 +23,88 @@ __pycache__/
 *.db
 *.pot
 *.mo
-*.coverage
+
+# Coverage reports
+.coverage
 .coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .cache/
-*.tmp
-*.bak
-*.swp
-*.swo
-.DS_Store
+
 # Virtualenv
 venv/
+.venv/
 .env/
-.envrc
+
 # Jupyter
 .ipynb_checkpoints/
+
 # VSCode
 .vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.stackdump
+
+# Redis
+dump.rdb
+*.rdb
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
 # Poetry
 poetry.lock
+
 # Test output
 htmlcov/
-# MacOS
-*.DS_Store
-# Exclude Codacy configuration folder
+
+# Codacy
 .codacy/

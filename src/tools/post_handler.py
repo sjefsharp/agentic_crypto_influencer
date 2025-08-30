@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict
 
 import requests
+
 from config.key_constants import X_TWEETS_ENDPOINT, X_URL
 
 

@@ -7,10 +7,27 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from error_management.error_manager import ErrorManager
-from tools.oauth_handler import OAuthHandler
-from tools.post_handler import PostHandler
-from tools.redis_handler import RedisHandler
-from tools.trends_handler import TrendsHandler
+
+# Import tools with external dependencies conditionally
+try:
+    from tools.oauth_handler import OAuthHandler
+except ImportError:
+    OAuthHandler = None  # type: ignore
+
+try:
+    from tools.post_handler import PostHandler
+except ImportError:
+    PostHandler = None  # type: ignore
+
+try:
+    from tools.redis_handler import RedisHandler
+except ImportError:
+    RedisHandler = None  # type: ignore
+
+try:
+    from tools.trends_handler import TrendsHandler
+except ImportError:
+    TrendsHandler = None  # type: ignore
 
 from config.key_constants import X_USER_ID
 
@@ -26,6 +43,24 @@ class X:
         """
         Initialize X API client.
         """
+        # Check if required dependencies are available
+        if RedisHandler is None:
+            raise ImportError(
+                "RedisHandler is not available. Please install required dependencies."
+            )
+        if OAuthHandler is None:
+            raise ImportError(
+                "OAuthHandler is not available. Please install required dependencies."
+            )
+        if PostHandler is None:
+            raise ImportError(
+                "PostHandler is not available. Please install required dependencies."
+            )
+        if TrendsHandler is None:
+            raise ImportError(
+                "TrendsHandler is not available. Please install required dependencies."
+            )
+
         # Initialize Redis client
         self.redis_client: Optional[Any] = RedisHandler().redis_client
 

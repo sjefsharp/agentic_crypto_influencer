@@ -1,7 +1,10 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-from config.search_agent_constants import SEARCH_AGENT_NAME, SEARCH_AGENT_SYSTEM_MESSAGE
+from config.search_agent_constants import (
+    SEARCH_AGENT_NAME,
+    SEARCH_AGENT_SYSTEM_MESSAGE,
+)
 from tools.google_grounding_tool import GoogleGroundingTool
 
 

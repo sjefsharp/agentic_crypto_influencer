@@ -1,10 +1,10 @@
 import asyncio
+from json import JSONDecodeError
 
 from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import DiGraphBuilder, GraphFlow
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from flask import json
-from json import JSONDecodeError
 
 from agents.publish_agent import PublishAgent
 from agents.search_agent import SearchAgent
@@ -12,15 +12,15 @@ from agents.summary_agent import SummaryAgent
 from config.key_constants import GOOGLE_GENAI_API_KEY
 from config.model_constants import MODEL_ID
 from error_management.error_manager import ErrorManager
-from tools.redis_handler import RedisHandler  # Corrected import path
+from tools.redis_handler import RedisHandler
 
 error_manager = ErrorManager()
 
 
 async def main():
+    if not GOOGLE_GENAI_API_KEY:
+        raise ValueError("GOOGLE_GENAI_API_KEY environment variable is required")
     try:
-        if not GOOGLE_GENAI_API_KEY:
-            raise ValueError("GOOGLE_GENAI_API_KEY environment variable is required")
         model_client = OpenAIChatCompletionClient(
             model=MODEL_ID, api_key=GOOGLE_GENAI_API_KEY
         )
@@ -51,16 +51,14 @@ async def main():
 
         team_state = None
 
-        if team_state:
-            await flow.load_state(team_state)
-        else:
-            # Load team_state from Redis if available
-            redis_team_state = redis_handler.get("team_state")
-            if redis_team_state:
-                try:
-                    team_state = json.loads(redis_team_state)
-                except JSONDecodeError:
-                    team_state = None
+        # Load team_state from Redis if available
+        redis_team_state = redis_handler.get("team_state")
+        if redis_team_state:
+            try:
+                team_state = json.loads(redis_team_state)
+                await flow.load_state(team_state)
+            except JSONDecodeError:
+                team_state = None
 
         stream = flow.run_stream(
             task="Process the latest crypto news and publish a compliant, high-quality tweet to X."
