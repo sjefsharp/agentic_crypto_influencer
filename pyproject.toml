@@ -1,38 +1,8 @@
-[project]
-name = "agentic-crypto-influencer"
-description = ""
-authors = [
-    {name = "Sjef Jenniskens", email = "14937399+sjefsharp@users.noreply.github.com"}
-]
-requires-python = ">=3.13"
-dependencies = [
-    "autogen-agentchat (>=0.7.4,<0.8.0)",
-    "autogen_ext (>=0.7.4,<0.8.0)",
-    "openai (>=1.0.0,<2.0.0)",
-    "tiktoken (>=0.5.0,<1.0.0)",
-    "python-dotenv (>=1.1.1,<2.0.0)",
-    "python-bitvavo-api (>=1.4.3,<2.0.0)",
-    "redis (>=6.4.0,<7.0.0)",
-    "google-genai (>=1.32.0,<2.0.0)",
-    "requests-oauthlib (>=2.0.0,<3.0.0)",
-    "flask (>=3.1.2,<4.0.0)",
-    "requests (>=2.32.5,<3.0.0)",
-    "backrefs (>=6.0.1,<7.0.0)",
-    "mypy (>=1.17.1,<2.0.0)"
-]
-dynamic = ["version", "readme", "classifiers"]
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-randomly = "*"
-pre-commit = "*"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.poetry]
+name = "agentic-crypto-influencer"
 version = "0.1.0"
+description = ""
+authors = ["Sjef Jenniskens <14937399+sjefsharp@users.noreply.github.com>"]
 readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -44,10 +14,19 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.13"
-autogen-agentchat = "*"
-autogen-ext = "*"
-openai = "*"
-tiktoken = "*"
+autogen-agentchat = ">=0.7.4,<0.8.0"
+autogen_ext = ">=0.7.4,<0.8.0"
+openai = ">=1.0.0,<2.0.0"
+tiktoken = ">=0.5.0,<1.0.0"
+python-dotenv = ">=1.1.1,<2.0.0"
+python-bitvavo-api = ">=1.4.3,<2.0.0"
+redis = ">=6.4.0,<7.0.0"
+google-genai = ">=1.32.0,<2.0.0"
+requests-oauthlib = ">=2.0.0,<3.0.0"
+flask = ">=3.1.2,<4.0.0"
+requests = ">=2.32.5,<3.0.0"
+backrefs = ">=6.0.1,<7.0.0"
+mypy = ">=1.17.1,<2.0.0"
 google-auth = "2.14.0"
 
 [tool.poetry.group.test.dependencies]
