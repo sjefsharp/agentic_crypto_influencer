@@ -12,8 +12,40 @@ permissions:
   pull-requests: write
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with lint
+
+      - name: Run Ruff checks
+        run: poetry run ruff check src/ tests/
+
+      - name: Run Ruff formatting check
+        run: poetry run ruff format --check src/ tests/
+
+      - name: Run MyPy type checking
+        run: poetry run mypy src/
+
+      - name: Run Bandit security linting
+        run: poetry run bandit -r src/ -c pyproject.toml
+
   test:
     runs-on: ubuntu-latest
+    needs: [lint] # Test alleen als linting succesvol is
     strategy:
       matrix:
         python-version: ["3.13"]
@@ -41,7 +73,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root --with lint,dev
+        run: poetry install --no-interaction
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
 
       - name: Install project
@@ -86,34 +118,3 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --with lint
-
-      - name: Run Ruff linting
-        run: poetry run ruff check src/ tests/
-
-      - name: Run Ruff formatting check
-        run: poetry run ruff format --check src/ tests/
-
-      - name: Run MyPy type checking
-        run: poetry run mypy src/
-
-      - name: Run Bandit security linting
-        run: poetry run bandit -r src/ -c pyproject.toml
