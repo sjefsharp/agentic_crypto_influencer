@@ -45,6 +45,11 @@ jobs:
           echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV
           echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV
           echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV
+          echo "X_URL=https://api.twitter.com" >> $GITHUB_ENV
+          echo "X_TWEETS_ENDPOINT=/2/tweets" >> $GITHUB_ENV
+          echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> $GITHUB_ENV
+          echo "X_TOKEN_ENDPOINT=/oauth/access_token" >> $GITHUB_ENV
+          echo "X_PERSONALIZED_TRENDS_ENDPOINT=/1.1/trends/available.json" >> $GITHUB_ENV
 
       - name: Run tests
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --junitxml=test-results.xml
