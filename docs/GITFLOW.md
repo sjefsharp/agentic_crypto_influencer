@@ -215,6 +215,7 @@ refactor: simplify algorithm complexity
 - **Ruff**: Fast Python linter & formatter
 - **MyPy**: Static type checking
 - **Bandit**: Security linting
+- **CodeQL**: Advanced security analysis & vulnerability detection
 - **Codecov**: Code coverage reporting
 - **Dependabot**: Automated dependency updates
 
