@@ -43,6 +43,9 @@ venv/
 
 # VSCode
 .vscode/
+# But allow specific config files
+!.vscode/settings.json
+!.vscode/launch.json
 *.code-workspace
 
 # PyCharm
