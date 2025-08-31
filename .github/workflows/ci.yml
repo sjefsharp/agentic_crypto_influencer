@@ -10,7 +10,6 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write
 
 jobs:
   lint:
@@ -49,7 +48,8 @@ jobs:
     needs: [lint] # Test alleen als linting succesvol is
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.11", "3.12", "3.13"]
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4

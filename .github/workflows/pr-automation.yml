@@ -5,11 +5,14 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main, develop]
 
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write
 
 jobs:
   pr-checks:
@@ -59,17 +62,15 @@ jobs:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN || 'test_bearer_token' }}
           BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY || 'test_key' }}
           BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
-        run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --junitxml=test-results.xml
+        run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --junitxml=test-results.xml
 
-      - name: Check test coverage
-        run: |
-          COVERAGE=$(poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=term-missing | grep "TOTAL" | awk '{print $6}' | sed 's/%//')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "❌ Coverage is below 80%: ${COVERAGE}%"
-            exit 1
-          else
-            echo "✅ Coverage is good: ${COVERAGE}%"
-          fi
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: pr-checks
+          name: codecov-pr
+          fail_ci_if_error: false
 
       - name: Run Bandit security linting
         run: poetry run bandit -r src/ -c pyproject.toml || true
