@@ -1,5 +1,7 @@
 name: PR Automation
 
+# Updated: 2025-08-31 - Fixed dependency conflicts and PR validation
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
