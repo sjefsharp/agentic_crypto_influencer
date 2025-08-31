@@ -53,6 +53,21 @@ def setup_test_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     """Setup test environment with temporary paths and mocked external dependencies."""
     # Mock environment variables for testing
     monkeypatch.setenv("TESTING", "true")
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test_google_api_key")
+    monkeypatch.setenv("GOOGLE_GENAI_API_KEY", "test_google_genai_api_key")
+    monkeypatch.setenv("X_API_KEY", "test_x_api_key")
+    monkeypatch.setenv("X_API_SECRET", "test_x_api_secret")
+    monkeypatch.setenv("X_ACCESS_TOKEN", "test_x_access_token")
+    monkeypatch.setenv("X_ACCESS_TOKEN_SECRET", "test_x_access_token_secret")
+    monkeypatch.setenv("BITVAVO_API_KEY", "test_bitvavo_api_key")
+    monkeypatch.setenv("BITVAVO_API_SECRET", "test_bitvavo_api_secret")
+    monkeypatch.setenv("X_TWEETS_ENDPOINT", "/2/tweets")
+    monkeypatch.setenv("X_URL", "https://api.twitter.com")
+    monkeypatch.setenv("X_AUTHORIZE_ENDPOINT", "/i/oauth2/authorize")
+    monkeypatch.setenv("X_TOKEN_ENDPOINT", "/2/oauth2/token")
+    monkeypatch.setenv("X_PERSONALIZED_TRENDS_ENDPOINT", "/2/trends/personalized")
+    monkeypatch.setenv("X_USER_ID", "test_user_id")
 
     # Create temporary config directory
     config_dir = tmp_path / "config"

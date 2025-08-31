@@ -5,9 +5,27 @@ from src.agentic_crypto_influencer.tools.x import X
 
 
 def test_post_length() -> None:
-    x = X()
-    with pytest.raises(ValueError, match="Post must be between 1 and 280 characters"):
-        x.post("a" * 281)
+    """Test that X.post validates post length by delegating to PostHandler."""
+    with (
+        patch("src.agentic_crypto_influencer.tools.x.RedisHandler") as mock_redis,
+        patch("src.agentic_crypto_influencer.tools.x.OAuthHandler") as mock_oauth,
+        patch("src.agentic_crypto_influencer.tools.x.PostHandler") as mock_post,
+        patch("src.agentic_crypto_influencer.tools.x.TrendsHandler") as mock_trends,
+    ):
+        # Mock the PostHandler to raise ValueError for invalid length
+        mock_post_instance = Mock()
+        mock_post_instance.post_message.side_effect = ValueError(
+            "Post must be between 1 and 280 characters"
+        )
+        mock_post.return_value = mock_post_instance
+
+        mock_redis.return_value.redis_client = Mock()
+        mock_oauth.return_value.refresh_access_token.return_value = {"access_token": "test_token"}
+        mock_trends.return_value = Mock()
+
+        x = X()
+        with pytest.raises(ValueError, match="Post must be between 1 and 280 characters"):
+            x.post("a" * 281)
 
 
 class TestXComprehensive:

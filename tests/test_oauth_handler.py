@@ -8,10 +8,11 @@ from src.agentic_crypto_influencer.tools.oauth_handler import OAuthHandler
 class TestOAuthHandler:
     def test_init(self) -> None:
         """Test OAuthHandler initialization"""
-        handler = OAuthHandler()
-        handler.redis_handler = Mock()
-        # Test that attributes are set (mocked in setUp)
-        assert handler.redis_handler is not None
+        with patch("src.agentic_crypto_influencer.tools.oauth_handler.RedisHandler") as mock_redis:
+            mock_redis.return_value = Mock()
+            handler = OAuthHandler()
+            # Test that attributes are set
+            assert handler.redis_handler is not None
 
     @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuth2Session")
     @patch("src.agentic_crypto_influencer.tools.oauth_handler.os.urandom")
@@ -21,8 +22,9 @@ class TestOAuthHandler:
         self, mock_b64encode: Mock, mock_sha256: Mock, mock_urandom: Mock, mock_oauth_session: Mock
     ) -> None:
         """Test getting authorization URL"""
-        handler = OAuthHandler()
-        handler.redis_handler = Mock()
+        with patch("src.agentic_crypto_influencer.tools.oauth_handler.RedisHandler") as mock_redis:
+            mock_redis.return_value = Mock()
+            handler = OAuthHandler()
 
         # Mock random bytes
         mock_urandom.return_value = b"random_bytes_30_chars_long"
@@ -46,8 +48,8 @@ class TestOAuthHandler:
         url = handler.get_authorization_url()
 
         # Verify Redis calls
-        handler.redis_handler.set.assert_any_call("code_verifier", "codechallengewithspecialchars")
-        handler.redis_handler.set.assert_any_call("oauth_state", "state123")
+        handler.redis_handler.set.assert_any_call("code_verifier", "codechallengewithspecialchars")  # type: ignore[attr-defined]
+        handler.redis_handler.set.assert_any_call("oauth_state", "state123")  # type: ignore[attr-defined]
 
         # Verify OAuth session creation
         mock_oauth_session.assert_called_once()

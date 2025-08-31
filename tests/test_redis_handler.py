@@ -11,7 +11,7 @@ from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 @pytest.fixture  # type: ignore[misc]
 def redis_handler() -> RedisHandler:
     """RedisHandler instance with mocked redis client for testing."""
-    handler = RedisHandler()
+    handler = RedisHandler(lazy_connect=True)
     handler.redis_client = Mock()
     return handler
 
