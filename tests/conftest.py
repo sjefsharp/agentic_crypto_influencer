@@ -2,21 +2,22 @@
 Pytest configuration and shared fixtures for the agentic crypto influencer project.
 """
 
-import tempfile
+from collections.abc import Generator
 from pathlib import Path
+import tempfile
 
 import pytest
 
 
-@pytest.fixture(scope="session")
-def temp_dir():
+@pytest.fixture(scope="session")  # type: ignore[misc]
+def temp_dir() -> Generator[Path]:
     """Create a temporary directory for the entire test session."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield Path(tmp_dir)
 
 
-@pytest.fixture
-def sample_crypto_data():
+@pytest.fixture  # type: ignore[misc]
+def sample_crypto_data() -> dict[str, dict[str, str | float | int]]:
     """Sample cryptocurrency data for testing."""
     return {
         "bitcoin": {
@@ -34,8 +35,8 @@ def sample_crypto_data():
     }
 
 
-@pytest.fixture
-def mock_api_response():
+@pytest.fixture  # type: ignore[misc]
+def mock_api_response() -> dict[str, str | dict[str, float | int | str]]:
     """Mock API response for testing."""
     return {
         "status": "success",
@@ -47,8 +48,8 @@ def mock_api_response():
     }
 
 
-@pytest.fixture(autouse=True)
-def setup_test_environment(monkeypatch, tmp_path):
+@pytest.fixture(autouse=True)  # type: ignore[misc]
+def setup_test_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Setup test environment with temporary paths and mocked external dependencies."""
     # Mock environment variables for testing
     monkeypatch.setenv("TESTING", "true")
@@ -62,7 +63,7 @@ def setup_test_environment(monkeypatch, tmp_path):
 
 
 # Custom markers
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure custom pytest markers."""
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
@@ -73,7 +74,7 @@ def pytest_configure(config):
 
 
 # Test selection helpers
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Modify test collection to add markers based on test names."""
     for item in items:
         # Mark slow tests
@@ -85,7 +86,5 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
 
         # Mark unit tests (default)
-        if not any(
-            marker.name in ["slow", "integration"] for marker in item.iter_markers()
-        ):
+        if not any(marker.name in ["slow", "integration"] for marker in item.iter_markers()):
             item.add_marker(pytest.mark.unit)

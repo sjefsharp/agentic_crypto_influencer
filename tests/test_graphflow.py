@@ -1,21 +1,23 @@
 import asyncio
-import unittest
+from collections.abc import AsyncGenerator
+from contextlib import suppress
 from unittest.mock import AsyncMock, Mock, patch
 
-from graphflow.graphflow import main
+import pytest
+from src.agentic_crypto_influencer.graphflow.graphflow import main
 
 
-class TestGraphflowMain(unittest.TestCase):
-    @patch("graphflow.graphflow.TextMentionTermination")
-    @patch("graphflow.graphflow.OpenAIChatCompletionClient")
-    @patch("graphflow.graphflow.SearchAgent")
-    @patch("graphflow.graphflow.SummaryAgent")
-    @patch("graphflow.graphflow.PublishAgent")
-    @patch("graphflow.graphflow.DiGraphBuilder")
-    @patch("graphflow.graphflow.GraphFlow")
-    @patch("graphflow.graphflow.RedisHandler")
-    @patch("graphflow.graphflow.json")
-    @patch("graphflow.graphflow.error_manager")
+class TestGraphflowMain:
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.TextMentionTermination")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.OpenAIChatCompletionClient")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SearchAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SummaryAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.PublishAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.DiGraphBuilder")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GraphFlow")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.RedisHandler")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.json")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.error_manager")
     def test_main_success(
         self,
         mock_error_manager: Mock,
@@ -28,9 +30,11 @@ class TestGraphflowMain(unittest.TestCase):
         mock_search_agent: Mock,
         mock_openai_client: Mock,
         mock_text_mention_termination: Mock,
-    ):
+    ) -> None:
         # Mock environment variable
-        with patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"):
+        with patch(
+            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
 
@@ -67,34 +71,28 @@ class TestGraphflowMain(unittest.TestCase):
             asyncio.run(main())
 
             # Assertions
-            mock_builder_instance.add_node.assert_any_call(
-                mock_search_agent.return_value
-            )
-            mock_builder_instance.add_node.assert_any_call(
-                mock_summary_agent.return_value
-            )
-            mock_builder_instance.add_node.assert_any_call(
-                mock_publish_agent.return_value
-            )
+            mock_builder_instance.add_node.assert_any_call(mock_search_agent.return_value)
+            mock_builder_instance.add_node.assert_any_call(mock_summary_agent.return_value)
+            mock_builder_instance.add_node.assert_any_call(mock_publish_agent.return_value)
             mock_builder_instance.build.assert_called_once()
             mock_flow_instance.run_stream.assert_called_once()
 
             # Assert error manager was called
             mock_error_manager.handle_error.assert_called_once()
             call_args = mock_error_manager.handle_error.call_args[0][0]
-            self.assertIsInstance(call_args, Exception)
-            self.assertEqual(str(call_args), "Test Exception")
+            assert isinstance(call_args, Exception)
+            assert str(call_args) == "Test Exception"
 
-    @patch("graphflow.graphflow.TextMentionTermination")
-    @patch("graphflow.graphflow.OpenAIChatCompletionClient")
-    @patch("graphflow.graphflow.SearchAgent")
-    @patch("graphflow.graphflow.SummaryAgent")
-    @patch("graphflow.graphflow.PublishAgent")
-    @patch("graphflow.graphflow.DiGraphBuilder")
-    @patch("graphflow.graphflow.GraphFlow")
-    @patch("graphflow.graphflow.RedisHandler")
-    @patch("graphflow.graphflow.json")
-    @patch("graphflow.graphflow.error_manager")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.TextMentionTermination")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.OpenAIChatCompletionClient")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SearchAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SummaryAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.PublishAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.DiGraphBuilder")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GraphFlow")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.RedisHandler")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.json")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.error_manager")
     def test_main_success_basic_flow(
         self,
         mock_error_manager: Mock,
@@ -107,10 +105,12 @@ class TestGraphflowMain(unittest.TestCase):
         mock_search_agent: Mock,
         mock_openai_client: Mock,
         mock_text_mention_termination: Mock,
-    ):
+    ) -> None:
         """Test main function basic setup and initialization."""
         # Mock environment variable
-        with patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"):
+        with patch(
+            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
 
@@ -125,7 +125,7 @@ class TestGraphflowMain(unittest.TestCase):
             mock_builder_instance.get_participants.return_value = []
 
             # Mock GraphFlow - simplified to avoid async issues
-            mock_graph_flow.return_value
+            # mock_graph_flow.return_value
 
             # Mock RedisHandler to return no existing state
             mock_redis_instance: Mock = mock_redis_handler.return_value
@@ -136,21 +136,13 @@ class TestGraphflowMain(unittest.TestCase):
 
             # Run the main function - expect it to fail gracefully due to async issues
             # but verify that the setup code was executed
-            try:
-                asyncio.run(main())
-            except Exception:
-                pass  # Expected due to async mocking complexity
+            with suppress(Exception):
+                asyncio.run(main())  # Expected due to async mocking complexity
 
             # Verify that the basic setup was performed
-            mock_builder_instance.add_node.assert_any_call(
-                mock_search_agent.return_value
-            )
-            mock_builder_instance.add_node.assert_any_call(
-                mock_summary_agent.return_value
-            )
-            mock_builder_instance.add_node.assert_any_call(
-                mock_publish_agent.return_value
-            )
+            mock_builder_instance.add_node.assert_any_call(mock_search_agent.return_value)
+            mock_builder_instance.add_node.assert_any_call(mock_summary_agent.return_value)
+            mock_builder_instance.add_node.assert_any_call(mock_publish_agent.return_value)
             mock_builder_instance.build.assert_called_once()
             mock_redis_instance.get.assert_called_once_with("team_state")
 
@@ -158,18 +150,18 @@ class TestGraphflowMain(unittest.TestCase):
             mock_error_manager.handle_error.assert_called_once()
             # Verify the error is related to async mocking
             error_arg = mock_error_manager.handle_error.call_args[0][0]
-            self.assertIsInstance(error_arg, TypeError)
+            assert isinstance(error_arg, TypeError)
 
-    @patch("graphflow.graphflow.TextMentionTermination")
-    @patch("graphflow.graphflow.OpenAIChatCompletionClient")
-    @patch("graphflow.graphflow.SearchAgent")
-    @patch("graphflow.graphflow.SummaryAgent")
-    @patch("graphflow.graphflow.PublishAgent")
-    @patch("graphflow.graphflow.DiGraphBuilder")
-    @patch("graphflow.graphflow.GraphFlow")
-    @patch("graphflow.graphflow.RedisHandler")
-    @patch("graphflow.graphflow.json")
-    @patch("graphflow.graphflow.error_manager")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.TextMentionTermination")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.OpenAIChatCompletionClient")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SearchAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SummaryAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.PublishAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.DiGraphBuilder")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GraphFlow")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.RedisHandler")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.json")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.error_manager")
     def test_main_json_decode_error(
         self,
         mock_error_manager: Mock,
@@ -182,10 +174,12 @@ class TestGraphflowMain(unittest.TestCase):
         mock_search_agent: Mock,
         mock_openai_client: Mock,
         mock_text_mention_termination: Mock,
-    ):
+    ) -> None:
         """Test main function when JSON decoding fails."""
         # Mock environment variable
-        with patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"):
+        with patch(
+            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
 
@@ -225,23 +219,23 @@ class TestGraphflowMain(unittest.TestCase):
             mock_error_manager.handle_error.assert_called_once()
             # The argument should be the JSONDecodeError
             error_arg = mock_error_manager.handle_error.call_args[0][0]
-            self.assertIsInstance(error_arg, Exception)
+            assert isinstance(error_arg, Exception)
 
-    @patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", None)
-    def test_main_missing_api_key(self):
-        with self.assertRaises(ValueError):
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", None)
+    def test_main_missing_api_key(self) -> None:
+        with pytest.raises(ValueError, match="GOOGLE_GENAI_API_KEY"):
             asyncio.run(main())
 
-    @patch("graphflow.graphflow.TextMentionTermination")
-    @patch("graphflow.graphflow.OpenAIChatCompletionClient")
-    @patch("graphflow.graphflow.SearchAgent")
-    @patch("graphflow.graphflow.SummaryAgent")
-    @patch("graphflow.graphflow.PublishAgent")
-    @patch("graphflow.graphflow.DiGraphBuilder")
-    @patch("graphflow.graphflow.GraphFlow")
-    @patch("graphflow.graphflow.RedisHandler")
-    @patch("graphflow.graphflow.json")
-    @patch("graphflow.graphflow.error_manager")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.TextMentionTermination")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.OpenAIChatCompletionClient")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SearchAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SummaryAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.PublishAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.DiGraphBuilder")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GraphFlow")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.RedisHandler")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.json")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.error_manager")
     def test_main_success_with_redis_state(
         self,
         mock_error_manager: Mock,
@@ -254,10 +248,12 @@ class TestGraphflowMain(unittest.TestCase):
         mock_search_agent: Mock,
         mock_openai_client: Mock,
         mock_text_mention_termination: Mock,
-    ):
+    ) -> None:
         """Test main function with Redis state loading and saving."""
         # Mock environment variable
-        with patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"):
+        with patch(
+            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
 
@@ -299,20 +295,18 @@ class TestGraphflowMain(unittest.TestCase):
             # Verify state was saved back to Redis
             mock_flow_instance.save_state.assert_called_once()
             mock_json.dumps.assert_called_once_with({"state": "data"})
-            mock_redis_instance.set.assert_called_once_with(
-                "team_state", '{"state": "data"}'
-            )
+            mock_redis_instance.set.assert_called_once_with("team_state", '{"state": "data"}')
 
-    @patch("graphflow.graphflow.TextMentionTermination")
-    @patch("graphflow.graphflow.OpenAIChatCompletionClient")
-    @patch("graphflow.graphflow.SearchAgent")
-    @patch("graphflow.graphflow.SummaryAgent")
-    @patch("graphflow.graphflow.PublishAgent")
-    @patch("graphflow.graphflow.DiGraphBuilder")
-    @patch("graphflow.graphflow.GraphFlow")
-    @patch("graphflow.graphflow.RedisHandler")
-    @patch("graphflow.graphflow.json")
-    @patch("graphflow.graphflow.error_manager")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.TextMentionTermination")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.OpenAIChatCompletionClient")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SearchAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.SummaryAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.PublishAgent")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.DiGraphBuilder")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.GraphFlow")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.RedisHandler")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.json")
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.error_manager")
     def test_main_success_with_async_stream_iteration(
         self,
         mock_error_manager: Mock,
@@ -325,10 +319,12 @@ class TestGraphflowMain(unittest.TestCase):
         mock_search_agent: Mock,
         mock_openai_client: Mock,
         mock_text_mention_termination: Mock,
-    ):
+    ) -> None:
         """Test main function with async stream iteration."""
         # Mock environment variable
-        with patch("graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"):
+        with patch(
+            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
 
@@ -346,7 +342,7 @@ class TestGraphflowMain(unittest.TestCase):
             mock_flow_instance: Mock = mock_graph_flow.return_value
 
             # Create an async generator mock for run_stream
-            async def async_generator():
+            async def async_generator() -> AsyncGenerator[str]:
                 yield "event1"
                 yield "event2"
 
@@ -373,7 +369,3 @@ class TestGraphflowMain(unittest.TestCase):
                 # Verify the async for loop executed and printed events
                 mock_print.assert_any_call("event1")
                 mock_print.assert_any_call("event2")
-
-
-if __name__ == "__main__":
-    unittest.main()

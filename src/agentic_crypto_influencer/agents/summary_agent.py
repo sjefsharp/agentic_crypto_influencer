@@ -1,15 +1,14 @@
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-
-from config.summary_agent_constants import (
+from src.agentic_crypto_influencer.config.summary_agent_constants import (
     SUMMARY_AGENT_NAME,
     SUMMARY_AGENT_SYSTEM_MESSAGE,
 )
-from tools.bitvavo_handler import BitvavoHandler
-from tools.validator import Validator
+from src.agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler
+from src.agentic_crypto_influencer.tools.validator import Validator
 
 
-class SummaryAgent(AssistantAgent):
+class SummaryAgent(AssistantAgent):  # type: ignore[misc]
     def __init__(self, model_client: OpenAIChatCompletionClient):
         super().__init__(
             name=SUMMARY_AGENT_NAME,

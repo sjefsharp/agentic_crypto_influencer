@@ -19,7 +19,11 @@ X_TOKEN_ENDPOINT = os.getenv("X_TOKEN_ENDPOINT")
 X_TWEETS_ENDPOINT = os.environ.get("X_TWEETS_ENDPOINT")
 X_PERSONALIZED_TRENDS_ENDPOINT = os.getenv("X_PERSONALIZED_TRENDS_ENDPOINT")
 X_REDIRECT_URI = "http://localhost:5000/callback"
-X_SCOPES = "tweet.read tweet.write tweet.moderate.write users.email users.read follows.read follows.write offline.access space.read mute.read mute.write like.read like.write list.read list.write block.read block.write bookmark.read bookmark.write media.write"
+X_SCOPES = (
+    "tweet.read tweet.write tweet.moderate.write users.email users.read follows.read "
+    "follows.write offline.access space.read mute.read mute.write like.read like.write "
+    "list.read list.write block.read block.write bookmark.read bookmark.write media.write"
+)
 X_USER_ID = os.getenv("X_USER_ID")
 REDIS_URL = os.getenv("REDIS_URL")
 

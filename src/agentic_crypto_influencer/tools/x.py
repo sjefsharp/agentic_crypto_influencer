@@ -4,32 +4,32 @@ Handles access token refresh and error management.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from error_management.error_manager import ErrorManager
+from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager
 
 # Import tools with external dependencies conditionally
 try:
-    from tools.oauth_handler import OAuthHandler
+    from src.agentic_crypto_influencer.tools.oauth_handler import OAuthHandler
 except ImportError:
     OAuthHandler = None  # type: ignore
 
 try:
-    from tools.post_handler import PostHandler
+    from src.agentic_crypto_influencer.tools.post_handler import PostHandler
 except ImportError:
     PostHandler = None  # type: ignore
 
 try:
-    from tools.redis_handler import RedisHandler
+    from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 except ImportError:
     RedisHandler = None  # type: ignore
 
 try:
-    from tools.trends_handler import TrendsHandler
+    from src.agentic_crypto_influencer.tools.trends_handler import TrendsHandler
 except ImportError:
     TrendsHandler = None  # type: ignore
 
-from config.key_constants import X_USER_ID
+from src.agentic_crypto_influencer.config.key_constants import X_USER_ID
 
 
 class X:
@@ -39,7 +39,7 @@ class X:
     Handles authentication, token refresh, and posting messages.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize X API client.
         """
@@ -61,8 +61,8 @@ class X:
                 "TrendsHandler is not available. Please install required dependencies."
             )
 
-        # Initialize Redis client
-        self.redis_client: Optional[Any] = RedisHandler().redis_client
+        # Initialize Redis client (lazy connection)
+        self.redis_client: Any | None = RedisHandler(lazy_connect=True).redis_client
 
         self.oauth_handler = OAuthHandler()
         self.access_token = self.oauth_handler.refresh_access_token()
@@ -92,8 +92,8 @@ class X:
         return self.post_handler.post_message(post)
 
     def get_personalized_trends(
-        self, user_id: str, max_results: int = 10, exclude: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, user_id: str, max_results: int = 10, exclude: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Fetch personalized trends for a user from the X API.
 
@@ -109,12 +109,10 @@ class X:
             RuntimeError: For network/refresh errors.
             Exception: For non-200 responses.
         """
-        return self.trends_handler.get_personalized_trends(
-            user_id, max_results, exclude
-        )
+        return self.trends_handler.get_personalized_trends(user_id, max_results, exclude)
 
 
-def main():
+def main() -> None:
     """
     Main entry point for posting a message to X.
     Handles error management and prints results.

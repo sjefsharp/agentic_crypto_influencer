@@ -2,12 +2,12 @@ import logging
 
 
 class ErrorManager:
-    def handle_error(self, error: Exception):
+    def handle_error(self, error: Exception) -> str:
         logging.error("An unexpected error occurred.", exc_info=True)
         return "An unexpected error occurred. Please try again later."
 
 
-def main():
+def main() -> None:
     """Main function that demonstrates error handling."""
     error_manager = ErrorManager()
 

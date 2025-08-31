@@ -1,34 +1,34 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from tools.oauth_handler import OAuthHandler
+import pytest
+from src.agentic_crypto_influencer.tools.oauth_handler import OAuthHandler
 
 
-class TestOAuthHandler(unittest.TestCase):
-    def setUp(self):
-        self.handler = OAuthHandler()
-        self.handler.redis_handler = Mock()
-
-    def test_init(self):
+class TestOAuthHandler:
+    def test_init(self) -> None:
         """Test OAuthHandler initialization"""
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
         # Test that attributes are set (mocked in setUp)
-        self.assertIsNotNone(self.handler.redis_handler)
+        assert handler.redis_handler is not None
 
-    @patch("tools.oauth_handler.OAuth2Session")
-    @patch("tools.oauth_handler.os.urandom")
-    @patch("tools.oauth_handler.hashlib.sha256")
-    @patch("tools.oauth_handler.base64.urlsafe_b64encode")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuth2Session")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.os.urandom")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.hashlib.sha256")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.base64.urlsafe_b64encode")
     def test_get_authorization_url(
-        self, mock_b64encode, mock_sha256, mock_urandom, mock_oauth_session
-    ):
+        self, mock_b64encode: Mock, mock_sha256: Mock, mock_urandom: Mock, mock_oauth_session: Mock
+    ) -> None:
         """Test getting authorization URL"""
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
+
         # Mock random bytes
         mock_urandom.return_value = b"random_bytes_30_chars_long"
 
         # Mock base64 encoding - need to mock the decode() method
-        mock_b64encode.return_value.decode.return_value = (
-            "code_challenge_with_special_chars!@#"
-        )
+        mock_b64encode.return_value.decode.return_value = "code_challenge_with_special_chars!@#"
 
         # Mock SHA256
         mock_hash = Mock()
@@ -43,13 +43,11 @@ class TestOAuthHandler(unittest.TestCase):
         )
         mock_oauth_session.return_value = mock_oauth
 
-        url = self.handler.get_authorization_url()
+        url = handler.get_authorization_url()
 
         # Verify Redis calls
-        self.handler.redis_handler.set.assert_any_call(
-            "code_verifier", "codechallengewithspecialchars"
-        )
-        self.handler.redis_handler.set.assert_any_call("oauth_state", "state123")
+        handler.redis_handler.set.assert_any_call("code_verifier", "codechallengewithspecialchars")
+        handler.redis_handler.set.assert_any_call("oauth_state", "state123")
 
         # Verify OAuth session creation
         mock_oauth_session.assert_called_once()
@@ -58,17 +56,20 @@ class TestOAuthHandler(unittest.TestCase):
         mock_oauth.authorization_url.assert_called_once()
 
         # Verify return value
-        self.assertEqual(url, "https://example.com/auth")
+        assert url == "https://example.com/auth"
 
-    @patch("tools.oauth_handler.OAuth2Session")
-    @patch("tools.oauth_handler.json.dumps")
-    @patch("tools.oauth_handler.logging.info")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuth2Session")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.json.dumps")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.logging.info")
     def test_exchange_code_for_tokens_success(
-        self, mock_logging_info, mock_json_dumps, mock_oauth_session
-    ):
+        self, mock_logging_info: Mock, mock_json_dumps: Mock, mock_oauth_session: Mock
+    ) -> None:
         """Test successful token exchange"""
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
+
         # Mock Redis get
-        self.handler.redis_handler.get.return_value = b"code_verifier_123"
+        handler.redis_handler.get.return_value = b"code_verifier_123"
 
         # Mock OAuth2Session
         mock_oauth = Mock()
@@ -79,42 +80,54 @@ class TestOAuthHandler(unittest.TestCase):
         # Mock json.dumps
         mock_json_dumps.return_value = '{"access_token": "token123"}'
 
-        result = self.handler.exchange_code_for_tokens("auth_code_123")
+        result = handler.exchange_code_for_tokens("auth_code_123")
 
         # Verify Redis calls
-        self.handler.redis_handler.get.assert_called_once_with("code_verifier")
-        self.handler.redis_handler.set.assert_called_once()
+        handler.redis_handler.get.assert_called_once_with("code_verifier")
+        handler.redis_handler.set.assert_called_once()
 
         # Verify OAuth session creation and token fetch
         mock_oauth_session.assert_called_once()
         mock_oauth.fetch_token.assert_called_once()
 
-        # Verify logging
-        mock_logging_info.assert_called_once_with("Tokens successfully saved to Redis.")
+        # Verify logging - should be called twice: Redis connection + success message
+        assert mock_logging_info.call_count == 2
+        mock_logging_info.assert_any_call("Connected to Redis at %s", "redis://localhost:6379")
+        mock_logging_info.assert_any_call("Tokens successfully saved to Redis.")
 
         # Verify return value
-        self.assertEqual(result, mock_token)
+        assert result == mock_token
 
-    def test_exchange_code_for_tokens_no_verifier(self):
+    def test_exchange_code_for_tokens_no_verifier(self) -> None:
         """Test token exchange without code verifier"""
-        self.handler.redis_handler.get.return_value = None
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
 
-        with self.assertRaises(RuntimeError) as context:
-            self.handler.exchange_code_for_tokens("auth_code_123")
+        handler.redis_handler.get.return_value = None
 
-        self.assertIn("Code verifier not found in Redis", str(context.exception))
+        with pytest.raises(RuntimeError) as exc_info:
+            handler.exchange_code_for_tokens("auth_code_123")
 
-    @patch("tools.oauth_handler.OAuth2Session")
-    @patch("tools.oauth_handler.json.loads")
-    @patch("tools.oauth_handler.json.dumps")
-    @patch("tools.oauth_handler.logging.info")
+        assert "Code verifier not found in Redis" in str(exc_info.value)
+
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuth2Session")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.json.loads")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.json.dumps")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.logging.info")
     def test_refresh_access_token_success(
-        self, mock_logging_info, mock_json_dumps, mock_json_loads, mock_oauth_session
-    ):
+        self,
+        mock_logging_info: Mock,
+        mock_json_dumps: Mock,
+        mock_json_loads: Mock,
+        mock_oauth_session: Mock,
+    ) -> None:
         """Test successful token refresh"""
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
+
         # Mock Redis get
         token_data = '{"access_token": "old_token", "refresh_token": "refresh123"}'
-        self.handler.redis_handler.get.return_value = token_data.encode()
+        handler.redis_handler.get.return_value = token_data.encode()
 
         # Mock json.loads
         mock_json_loads.return_value = {
@@ -131,32 +144,37 @@ class TestOAuthHandler(unittest.TestCase):
         # Mock json.dumps
         mock_json_dumps.return_value = '{"access_token": "new_token"}'
 
-        result = self.handler.refresh_access_token()
+        result = handler.refresh_access_token()
 
         # Verify Redis calls
-        self.handler.redis_handler.get.assert_called_once_with("token")
-        self.handler.redis_handler.set.assert_called_once()
+        handler.redis_handler.get.assert_called_once_with("token")
+        handler.redis_handler.set.assert_called_once()
 
         # Verify OAuth session creation and token refresh
         mock_oauth_session.assert_called_once()
         mock_oauth.refresh_token.assert_called_once()
 
-        # Verify logging
-        mock_logging_info.assert_called_once_with(
+        # Verify logging - should be called twice: Redis connection + success message
+        assert mock_logging_info.call_count == 2
+        mock_logging_info.assert_any_call("Connected to Redis at %s", "redis://localhost:6379")
+        mock_logging_info.assert_any_call(
             "Access token successfully refreshed and saved to Redis."
         )
 
         # Verify return value
-        self.assertEqual(result, new_token)
+        assert result == new_token
 
-    def test_refresh_access_token_no_token(self):
+    def test_refresh_access_token_no_token(self) -> None:
         """Test token refresh without existing token"""
-        self.handler.redis_handler.get.return_value = None
+        handler = OAuthHandler()
+        handler.redis_handler = Mock()
 
-        with self.assertRaises(RuntimeError) as context:
-            self.handler.refresh_access_token()
+        handler.redis_handler.get.return_value = None
 
-        self.assertIn("No token found in Redis", str(context.exception))
+        with pytest.raises(RuntimeError) as exc_info:
+            handler.refresh_access_token()
+
+        assert "No token found in Redis" in str(exc_info.value)
 
 
 if __name__ == "__main__":

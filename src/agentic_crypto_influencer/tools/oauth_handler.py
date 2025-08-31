@@ -4,11 +4,10 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict
+from typing import Any
 
 from requests_oauthlib import OAuth2Session
-
-from config.key_constants import (
+from src.agentic_crypto_influencer.config.key_constants import (
     X_AUTHORIZE_ENDPOINT,
     X_CLIENT_ID,
     X_CLIENT_SECRET,
@@ -17,11 +16,11 @@ from config.key_constants import (
     X_TOKEN_ENDPOINT,
     X_URL,
 )
-from tools.redis_handler import RedisHandler
+from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 
 
 class OAuthHandler:
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis_handler = RedisHandler()
         self.client_id = X_CLIENT_ID
         self.client_secret = X_CLIENT_SECRET
@@ -42,13 +41,13 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        authorization_url, state = oauth.authorization_url(  # type: ignore
+        authorization_url, state = oauth.authorization_url(
             self.auth_url, code_challenge=code_challenge, code_challenge_method="S256"
         )
         self.redis_handler.set("oauth_state", state)
         return str(authorization_url)
 
-    def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
+    def exchange_code_for_tokens(self, code: str) -> dict[str, Any]:
         code_verifier = self.redis_handler.get("code_verifier")
         if not code_verifier:
             raise RuntimeError("Code verifier not found in Redis")
@@ -56,7 +55,7 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        token = oauth.fetch_token(  # type: ignore
+        token = oauth.fetch_token(
             token_url=self.token_url,
             client_secret=self.client_secret,
             code_verifier=code_verifier.decode("utf-8"),
@@ -66,7 +65,7 @@ class OAuthHandler:
         logging.info("Tokens successfully saved to Redis.")
         return dict(token)
 
-    def refresh_access_token(self) -> Dict[str, Any]:
+    def refresh_access_token(self) -> dict[str, Any]:
         token_data = self.redis_handler.get("token")
         if not token_data:
             raise RuntimeError("No token found in Redis")
@@ -75,13 +74,16 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        new_token = oauth.refresh_token(  # type: ignore
+        new_token = oauth.refresh_token(
             token_url=self.token_url,
             client_id=self.client_id,
             client_secret=self.client_secret,
             refresh_token=token.get("refresh_token", ""),
             headers={
-                "Authorization": f"Basic {base64.b64encode(f'{self.client_id}:{self.client_secret}'.encode()).decode()}"
+                "Authorization": (
+                    "Basic "
+                    + base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode()
+                )
             },
         )
         self.redis_handler.set("token", json.dumps(new_token))
