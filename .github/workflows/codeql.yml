@@ -94,7 +94,7 @@ jobs:
           python3 -c "
           import json
           import sys
-          
+
           # Read bandit JSON
           try:
               with open('bandit-report.json', 'r') as f:
@@ -102,10 +102,10 @@ jobs:
           except FileNotFoundError:
               print('Bandit report not found, creating minimal SARIF')
               data = {'results': []}
-          
+
           # Check if there are any results
           results = data.get('results', [])
-          
+
           sarif = {
               '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
               'version': '2.1.0',
@@ -120,7 +120,7 @@ jobs:
                   'results': []
               }]
           }
-          
+
           # Convert bandit results to SARIF format if any exist
           if results:
               sarif_results = []
@@ -145,10 +145,10 @@ jobs:
                   sarif_results.append(sarif_result)
               
               sarif['runs'][0]['results'] = sarif_results
-          
+
           with open('bandit-report.sarif', 'w') as f:
               json.dump(sarif, f, indent=2)
-          
+
           print(f'Converted {len(results)} bandit results to SARIF format')
           "
 
