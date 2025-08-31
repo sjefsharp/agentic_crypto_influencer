@@ -42,7 +42,70 @@ jobs:
         run: poetry run mypy src/
 
       - name: Run Bandit security linting
-        run: poetry run bandit -r src/ -c pyproject.toml -f sarif -o bandit-report.sarif || true
+        run: poetry run bandit -r src/ -c pyproject.toml -f json -o bandit-report.json
+
+      - name: Convert Bandit JSON to SARIF
+        run: |
+          python3 -c "
+          import json
+          import sys
+          
+          # Read bandit JSON
+          try:
+              with open('bandit-report.json', 'r') as f:
+                  data = json.load(f)
+          except FileNotFoundError:
+              print('Bandit report not found, creating minimal SARIF')
+              data = {'results': []}
+          
+          # Check if there are any results
+          results = data.get('results', [])
+          
+          sarif = {
+              '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+              'version': '2.1.0',
+              'runs': [{
+                  'tool': {
+                      'driver': {
+                          'name': 'Bandit',
+                          'version': '1.8.6',
+                          'informationUri': 'https://bandit.readthedocs.io/'
+                      }
+                  },
+                  'results': []
+              }]
+          }
+          
+          # Convert bandit results to SARIF format if any exist
+          if results:
+              sarif_results = []
+              for result in results:
+                  sarif_result = {
+                      'ruleId': result.get('test_id', 'unknown'),
+                      'level': result.get('issue_severity', 'warning').lower(),
+                      'message': {
+                          'text': result.get('issue_text', '')
+                      },
+                      'locations': [{
+                          'physicalLocation': {
+                              'artifactLocation': {
+                                  'uri': result.get('filename', '')
+                              },
+                              'region': {
+                                  'startLine': result.get('line_number', 1)
+                              }
+                          }
+                      }]
+                  }
+                  sarif_results.append(sarif_result)
+              
+              sarif['runs'][0]['results'] = sarif_results
+          
+          with open('bandit-report.sarif', 'w') as f:
+              json.dump(sarif, f, indent=2)
+          
+          print(f'Converted {len(results)} bandit results to SARIF format')
+          "
 
       - name: Upload Bandit SARIF results
         uses: github/codeql-action/upload-sarif@v3
