@@ -7,7 +7,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "autogen-agentchat (>=0.7.4,<0.8.0)",
-    "autogen-ext (>=0.7.4,<0.8.0)",
+    "autogen_ext (>=0.7.4,<0.8.0)",
     "openai (>=1.0.0,<2.0.0)",
     "tiktoken (>=0.5.0,<1.0.0)",
     "python-dotenv (>=1.1.1,<2.0.0)",
@@ -104,9 +104,6 @@ unfixable = [
 force-sort-within-sections = true
 split-on-trailing-comma = false
 
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
 [tool.pytest.ini_options]
 addopts = [
     "--strict-config",
@@ -115,7 +112,7 @@ addopts = [
 xfail_strict = true
 filterwarnings = [
     # When running tests, treat warnings as errors (e.g. -Werror).
-    # See: https://docs.pytest.org/en/latest/reference/reference.html#confval-filterwarnings
+    # See: https://docs.pytest.org/en/latest/reference/reference.html#confval/filterwarnings
     "error",
     # Ignore AsyncMock warnings that are not actual test failures
     "ignore::pytest.PytestUnraisableExceptionWarning",
@@ -128,7 +125,7 @@ filterwarnings = [
 branch = true
 
 # To globally exclude additional code blocks from code coverage reporting, see:
-# https://coverage.readthedocs.io/en/latest/excluding.html#advanced-exclusion
+# https://coverage.readthedocs.io/en/latest/excluding.html#excluding
 [tool.coverage.report]
 exclude_also = [
     "case _ as unreachable",
@@ -143,7 +140,3 @@ strict = true
 enable_error_code = ["deprecated", "exhaustive-match", "explicit-override"]
 explicit_package_bases = true
 warn_unused_ignores = false
-
-[tool.bandit]
-exclude_dirs = ["tests", ".git", "__pycache__", ".venv", "venv"]
-skips = ["B101", "B601"]  # Skip assert checks and shell usage warnings
