@@ -34,8 +34,20 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction
 
+      - name: Set up test environment
+        run: |
+          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+          echo "GOOGLE_API_KEY=test_key" >> $GITHUB_ENV
+          echo "GOOGLE_GENAI_API_KEY=test_key" >> $GITHUB_ENV
+          echo "X_API_KEY=test_key" >> $GITHUB_ENV
+          echo "X_API_SECRET=test_secret" >> $GITHUB_ENV
+          echo "X_ACCESS_TOKEN=test_token" >> $GITHUB_ENV
+          echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV
+          echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV
+          echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV
+
       - name: Run tests
-        run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80
+        run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --junitxml=test-results.xml
 
       - name: Check test coverage
         run: |
@@ -54,7 +66,7 @@ jobs:
           name: Test Results
           path: "test-results.xml"
           reporter: java-junit
-          fail-on-error: true
+          fail-on-error: false
 
   pr-validation:
     runs-on: ubuntu-latest
@@ -80,10 +92,14 @@ jobs:
           requireScope: false
 
       - name: Check PR size
-        uses: codacy/git-version@v2
-        with:
-          release-branch: main
-          dev-branch: develop
+        run: |
+          # Check if PR has too many changes
+          CHANGED_FILES=$(git diff --name-only HEAD~1 | wc -l)
+          if [ "$CHANGED_FILES" -gt 50 ]; then
+            echo "⚠️ Large PR detected: $CHANGED_FILES files changed"
+          else
+            echo "✅ PR size looks good: $CHANGED_FILES files changed"
+          fi
 
       - name: Label PR based on branch
         if: github.event.pull_request.head.ref != github.event.pull_request.base.ref

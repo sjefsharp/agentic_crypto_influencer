@@ -3,7 +3,7 @@ Tests for agent classes using pytest best practices.
 """
 
 from typing import TYPE_CHECKING
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from src.agentic_crypto_influencer.agents.publish_agent import PublishAgent
@@ -33,7 +33,14 @@ def review_agent(mock_client: "OpenAIChatCompletionClient") -> ReviewAgent:
 @pytest.fixture  # type: ignore[misc]
 def publish_agent(mock_client: "OpenAIChatCompletionClient") -> PublishAgent:
     """PublishAgent instance for testing."""
-    return PublishAgent(mock_client)
+
+    # Create a simple stub function with proper type hints
+    def mock_post(post: str) -> dict[str, str]:
+        return {"status": "success", "id": "123"}
+
+    with patch("src.agentic_crypto_influencer.agents.publish_agent.X") as mock_x:
+        mock_x.return_value.post = mock_post
+        return PublishAgent(mock_client)
 
 
 @pytest.fixture  # type: ignore[misc]
@@ -43,9 +50,20 @@ def summary_agent(mock_client: "OpenAIChatCompletionClient") -> SummaryAgent:
 
 
 @pytest.fixture  # type: ignore[misc]
-def search_agent(mock_client: "OpenAIChatCompletionClient") -> SearchAgent:
+def search_agent(
+    mock_client: "OpenAIChatCompletionClient",
+) -> SearchAgent:
     """SearchAgent instance for testing."""
-    return SearchAgent(mock_client)
+
+    # Create a simple stub function with proper type hints
+    def mock_run_crypto_search(query: str) -> str:
+        return f"Search results for: {query}"
+
+    with patch(
+        "src.agentic_crypto_influencer.agents.search_agent.GoogleGroundingTool"
+    ) as mock_ggt:
+        mock_ggt.return_value.run_crypto_search = mock_run_crypto_search
+        return SearchAgent(mock_client)
 
 
 @pytest.mark.unit  # type: ignore[misc]
