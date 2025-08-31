@@ -125,7 +125,7 @@ jobs:
       - name: Check PR size
         run: |
           # Check if PR has too many changes
-          CHANGED_FILES=$(git diff --name-only HEAD~1 | wc -l)
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | wc -l)
           if [ "$CHANGED_FILES" -gt 50 ]; then
             echo "⚠️ Large PR detected: $CHANGED_FILES files changed"
           else
