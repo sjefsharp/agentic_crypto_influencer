@@ -22,19 +22,11 @@ dependencies = [
 ]
 dynamic = ["version", "readme", "classifiers"]
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-cov",
-    "pytest-randomly",
-    "mypy",
-    "types-redis",
-    "types-flask",
-    "types-requests",
-    "ruff",
-    "bandit[toml]",
-    "pre-commit"
-]
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-randomly = "*"
+pre-commit = "*"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -72,6 +64,10 @@ types-requests = "*"
 [tool.poetry.group.lint.dependencies]
 ruff = "*"
 bandit = {extras = ["toml"], version = "*"}
+mypy = "*"
+types-redis = "*"
+types-flask = "*"
+types-requests = "*"
 
 [tool.ruff]
 line-length = 99
