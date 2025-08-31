@@ -50,14 +50,14 @@ jobs:
       - name: Set up test environment
         run: |
           echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "GOOGLE_API_KEY=test_key" >> $GITHUB_ENV
-          echo "GOOGLE_GENAI_API_KEY=test_key" >> $GITHUB_ENV
-          echo "X_API_KEY=test_key" >> $GITHUB_ENV
-          echo "X_API_SECRET=test_secret" >> $GITHUB_ENV
-          echo "X_ACCESS_TOKEN=test_token" >> $GITHUB_ENV
-          echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV
-          echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV
-          echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY || 'test_key' }}" >> $GITHUB_ENV
+          echo "GOOGLE_GENAI_API_KEY=${{ secrets.GOOGLE_GENAI_API_KEY || 'test_key' }}" >> $GITHUB_ENV
+          echo "X_API_KEY=${{ secrets.X_API_KEY || 'test_key' }}" >> $GITHUB_ENV
+          echo "X_API_SECRET=${{ secrets.X_API_SECRET || 'test_secret' }}" >> $GITHUB_ENV
+          echo "X_ACCESS_TOKEN=${{ secrets.X_ACCESS_TOKEN || 'test_token' }}" >> $GITHUB_ENV
+          echo "X_ACCESS_TOKEN_SECRET=${{ secrets.X_ACCESS_TOKEN_SECRET || 'test_secret' }}" >> $GITHUB_ENV
+          echo "BITVAVO_API_KEY=${{ secrets.BITVAVO_API_KEY || 'test_key' }}" >> $GITHUB_ENV
+          echo "BITVAVO_API_SECRET=${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}" >> $GITHUB_ENV
           echo "X_URL=https://api.twitter.com" >> $GITHUB_ENV
           echo "X_TWEETS_ENDPOINT=/2/tweets" >> $GITHUB_ENV
           echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> $GITHUB_ENV
