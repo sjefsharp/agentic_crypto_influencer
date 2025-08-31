@@ -91,6 +91,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'release'
     needs: [release]
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
