@@ -57,6 +57,8 @@ jobs:
 
   deploy-staging:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.ref == 'refs/heads/develop'
     needs: [release]
 
