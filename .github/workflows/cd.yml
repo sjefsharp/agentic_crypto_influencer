@@ -37,19 +37,20 @@ jobs:
       - name: Set up test environment
         run: |
           echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY || 'test_key' }}" >> $GITHUB_ENV
-          echo "GOOGLE_GENAI_API_KEY=${{ secrets.GOOGLE_GENAI_API_KEY || 'test_key' }}" >> $GITHUB_ENV
-          echo "X_API_KEY=${{ secrets.X_API_KEY || 'test_key' }}" >> $GITHUB_ENV
-          echo "X_API_SECRET=${{ secrets.X_API_SECRET || 'test_secret' }}" >> $GITHUB_ENV
-          echo "X_ACCESS_TOKEN=${{ secrets.X_ACCESS_TOKEN || 'test_token' }}" >> $GITHUB_ENV
-          echo "X_ACCESS_TOKEN_SECRET=${{ secrets.X_ACCESS_TOKEN_SECRET || 'test_secret' }}" >> $GITHUB_ENV
-          echo "BITVAVO_API_KEY=${{ secrets.BITVAVO_API_KEY || 'test_key' }}" >> $GITHUB_ENV
-          echo "BITVAVO_API_SECRET=${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}" >> $GITHUB_ENV
           echo "X_URL=https://api.twitter.com" >> $GITHUB_ENV
           echo "X_TWEETS_ENDPOINT=/2/tweets" >> $GITHUB_ENV
           echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> $GITHUB_ENV
           echo "X_TOKEN_ENDPOINT=/oauth/access_token" >> $GITHUB_ENV
           echo "X_PERSONALIZED_TRENDS_ENDPOINT=/1.1/trends/available.json" >> $GITHUB_ENV
+          # Set test values for missing secrets (secrets are automatically available as env vars)
+          [ -z "$GOOGLE_API_KEY" ] && echo "GOOGLE_API_KEY=test_key" >> $GITHUB_ENV || true
+          [ -z "$GOOGLE_GENAI_API_KEY" ] && echo "GOOGLE_GENAI_API_KEY=test_key" >> $GITHUB_ENV || true
+          [ -z "$X_API_KEY" ] && echo "X_API_KEY=test_key" >> $GITHUB_ENV || true
+          [ -z "$X_API_SECRET" ] && echo "X_API_SECRET=test_secret" >> $GITHUB_ENV || true
+          [ -z "$X_ACCESS_TOKEN" ] && echo "X_ACCESS_TOKEN=test_token" >> $GITHUB_ENV || true
+          [ -z "$X_ACCESS_TOKEN_SECRET" ] && echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV || true
+          [ -z "$BITVAVO_API_KEY" ] && echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV || true
+          [ -z "$BITVAVO_API_SECRET" ] && echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV || true
 
       - name: Run tests
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80
