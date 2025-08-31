@@ -86,7 +86,14 @@ jobs:
       - name: Run Bandit security linting
         if: matrix.language == 'python'
         run: |
-          poetry run bandit -r src/ -c pyproject.toml -f json -o bandit-report.json || true
+          poetry run bandit -r src/ -c pyproject.toml -f sarif -o bandit-report.sarif || true
+
+      - name: Upload Bandit SARIF results
+        if: matrix.language == 'python'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit-report.sarif
+          category: bandit
 
       - name: Upload Bandit results
         if: matrix.language == 'python'

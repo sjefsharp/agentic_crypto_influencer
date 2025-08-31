@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      security-events: write
 
     steps:
       - name: Checkout code
@@ -59,6 +60,16 @@ jobs:
           BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY || 'test_key' }}
           BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80
+
+      - name: Run Bandit security linting
+        run: poetry run bandit -r src/ -c pyproject.toml -f sarif -o bandit-report.sarif || true
+
+      - name: Upload Bandit SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit-report.sarif
+          category: bandit
 
       - name: Build package
         run: poetry build

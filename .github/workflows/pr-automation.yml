@@ -9,6 +9,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
+  security-events: write
 
 jobs:
   pr-checks:
@@ -69,6 +70,16 @@ jobs:
           else
             echo "✅ Coverage is good: ${COVERAGE}%"
           fi
+
+      - name: Run Bandit security linting
+        run: poetry run bandit -r src/ -c pyproject.toml -f sarif -o bandit-report.sarif || true
+
+      - name: Upload Bandit SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit-report.sarif
+          category: bandit
 
       - name: Comment PR with coverage
         uses: dorny/test-reporter@v1
