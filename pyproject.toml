@@ -32,7 +32,8 @@ dev = [
     "types-flask",
     "types-requests",
     "ruff",
-    "bandit[toml]"
+    "bandit[toml]",
+    "pre-commit"
 ]
 
 [tool.setuptools.packages.find]
