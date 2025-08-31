@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 import requests
+
 from src.agentic_crypto_influencer.config.key_constants import (
     X_PERSONALIZED_TRENDS_ENDPOINT,
     X_URL,

@@ -1,11 +1,11 @@
-from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-from src.agentic_crypto_influencer.config.summary_agent_constants import (
+from agentic_crypto_influencer.config.summary_agent_constants import (
     SUMMARY_AGENT_NAME,
     SUMMARY_AGENT_SYSTEM_MESSAGE,
 )
-from src.agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler
-from src.agentic_crypto_influencer.tools.validator import Validator
+from agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler
+from agentic_crypto_influencer.tools.validator import Validator
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 
 class SummaryAgent(AssistantAgent):  # type: ignore[misc]

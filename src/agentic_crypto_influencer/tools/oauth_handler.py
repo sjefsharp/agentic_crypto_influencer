@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from requests_oauthlib import OAuth2Session
+
 from src.agentic_crypto_influencer.config.key_constants import (
     X_AUTHORIZE_ENDPOINT,
     X_CLIENT_ID,

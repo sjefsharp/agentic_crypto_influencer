@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from redis import Redis
+
 from src.agentic_crypto_influencer.config.key_constants import REDIS_URL
 
 

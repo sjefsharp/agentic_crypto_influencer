@@ -1,6 +1,7 @@
 from typing import Any
 
 from python_bitvavo_api.bitvavo import Bitvavo
+
 from src.agentic_crypto_influencer.config.key_constants import BITVAVO_API_KEY, BITVAVO_API_SECRET
 
 
