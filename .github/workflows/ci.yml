@@ -47,30 +47,35 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
 
-      - name: Set up test environment
-        run: |
-          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "X_URL=https://api.twitter.com" >> $GITHUB_ENV
-          echo "X_TWEETS_ENDPOINT=/2/tweets" >> $GITHUB_ENV
-          echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> $GITHUB_ENV
-          echo "X_TOKEN_ENDPOINT=/oauth/access_token" >> $GITHUB_ENV
-          echo "X_PERSONALIZED_TRENDS_ENDPOINT=/1.1/trends/available.json" >> $GITHUB_ENV
-          # Set test values for missing secrets (secrets are automatically available as env vars)
-          [ -z "$GOOGLE_API_KEY" ] && echo "GOOGLE_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$GOOGLE_GENAI_API_KEY" ] && echo "GOOGLE_GENAI_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$X_API_KEY" ] && echo "X_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$X_API_SECRET" ] && echo "X_API_SECRET=test_secret" >> $GITHUB_ENV || true
-          [ -z "$X_ACCESS_TOKEN" ] && echo "X_ACCESS_TOKEN=test_token" >> $GITHUB_ENV || true
-          [ -z "$X_ACCESS_TOKEN_SECRET" ] && echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV || true
-          [ -z "$BITVAVO_API_KEY" ] && echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$BITVAVO_API_SECRET" ] && echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV || true
-
       - name: Run pre-commit hooks
         run: |
           poetry run pre-commit install
           poetry run pre-commit run --all-files
 
       - name: Run tests with coverage
+        env:
+          # Configuration variables (safe to use vars.)
+          REDIS_URL: ${{ vars.REDIS_URL || 'redis://localhost:6379' }}
+          X_URL: ${{ vars.X_URL || 'https://api.twitter.com' }}
+          X_TWEETS_ENDPOINT: ${{ vars.X_TWEETS_ENDPOINT || '/2/tweets' }}
+          X_AUTHORIZE_ENDPOINT: ${{ vars.X_AUTHORIZE_ENDPOINT || '/oauth/authorize' }}
+          X_TOKEN_ENDPOINT: ${{ vars.X_TOKEN_ENDPOINT || '/oauth/access_token' }}
+          X_PERSONALIZED_TRENDS_ENDPOINT: ${{ vars.X_PERSONALIZED_TRENDS_ENDPOINT || '/1.1/trends/available.json' }}
+          X_USER_ID: ${{ vars.X_USER_ID || '123456789' }}
+          GOOGLE_CSE_ID: ${{ vars.GOOGLE_CSE_ID || '52532b3c697ee4a4c' }}
+          GOOGLE_GENAI_USE_VERTEXAI: ${{ vars.GOOGLE_GENAI_USE_VERTEXAI || '0' }}
+          # Secrets (use secrets. with fallback)
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || 'test_key' }}
+          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'test_key' }}
+          X_API_KEY: ${{ secrets.X_API_KEY || 'test_key' }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET || 'test_secret' }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN || 'test_token' }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET || 'test_secret' }}
+          X_API_CLIENT_ID: ${{ secrets.X_API_CLIENT_ID || 'test_client_id' }}
+          X_API_CLIENT_SECRET: ${{ secrets.X_API_CLIENT_SECRET || 'test_client_secret' }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN || 'test_bearer_token' }}
+          BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY || 'test_key' }}
+          BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
         run: |
           poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
