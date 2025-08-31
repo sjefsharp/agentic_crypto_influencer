@@ -41,9 +41,9 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --cov-report=term-missing --junitxml=test-results.xml
+          poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --cov-report=term-missing --cov-report=json:coverage.json --junitxml=test-results.xml
           echo "COVERAGE_REPORT<<EOF" >> $GITHUB_ENV
-          poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=term-missing | grep "TOTAL" | head -1 >> $GITHUB_ENV
+          poetry run python -c "import json; data=json.load(open('coverage.json')); print(f\"{data['totals']['percent_covered']:.1f}\")" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
         env:
           # Configuration variables (safe to use vars.)
@@ -71,12 +71,12 @@ jobs:
 
       - name: Check test coverage
         run: |
-          COVERAGE=$(echo "$COVERAGE_REPORT" | sed -n 's/.*TOTAL.*\([0-9]\+\)%/\1/p' || echo "0")
+          COVERAGE=$(echo "$COVERAGE_REPORT" | tr -d '%')
           if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "0" ]; then
             echo "❌ Could not determine coverage percentage"
             exit 1
           fi
-          if [ "$COVERAGE" -lt 80 ]; then
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "❌ Coverage is below 80%: ${COVERAGE}%"
             exit 1
           else
