@@ -71,6 +71,8 @@ jobs:
 
   deploy-production:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.ref == 'refs/heads/main' && github.event_name == 'release'
     needs: [release]
 
