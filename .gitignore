@@ -1,10 +1,11 @@
 # Environment files
 .env
-.env.*
 .envrc
 .env.local
 .env.production
 .env.staging
+# Allow .env.example in version control (but ignore other .env.* files)
+!.env.example
 
 # Python standaard
 __pycache__/
