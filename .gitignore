@@ -104,6 +104,11 @@ poetry.lock
 # Test output
 htmlcov/
 
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
 # Codacy
 .codacy/
 

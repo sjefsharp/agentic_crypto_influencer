@@ -104,11 +104,9 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Build and publish
+      - name: Build package
         run: |
           poetry build
-          poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
-          poetry publish
 
       - name: Notify on success
         if: success()

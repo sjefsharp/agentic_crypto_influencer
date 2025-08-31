@@ -40,12 +40,6 @@ jobs:
       - name: Build package
         run: poetry build
 
-      - name: Publish to PyPI
-        if: github.event_name == 'release'
-        run: |
-          poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
-          poetry publish
-
       - name: Create GitHub release notes
         if: github.event_name == 'release'
         run: |
