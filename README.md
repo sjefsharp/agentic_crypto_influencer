@@ -145,7 +145,6 @@ poetry run pre-commit run pytest --all-files
 - **ruff**: Fast Python linter & formatter
 - **mypy**: Static type checking
 - **bandit**: Security linting
-- **safety**: Dependency vulnerability scanning
 
 ### GitHub Actions Workflows
 
@@ -161,7 +160,7 @@ poetry run pre-commit run pytest --all-files
 
 - ✅ **Test Coverage**: ≥ 80%
 - ✅ **Code Quality**: Ruff, MyPy, Bandit
-- ✅ **Security**: Safety, CodeQL, Dependency Review
+- ✅ **Security**: CodeQL, Dependency Review
 - ✅ **PR Reviews**: Required for protected branches
 - ✅ **Conventional Commits**: Enforced via PR titles
 

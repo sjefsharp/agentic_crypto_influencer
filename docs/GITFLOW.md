@@ -208,7 +208,6 @@ refactor: simplify algorithm complexity
 - Code formatting (Ruff)
 - Linting (Ruff, MyPy, Bandit)
 - Testing (Pytest with coverage)
-- Security scanning (Safety)
 
 ## Tools & Integrations
 
@@ -216,7 +215,6 @@ refactor: simplify algorithm complexity
 - **Ruff**: Fast Python linter & formatter
 - **MyPy**: Static type checking
 - **Bandit**: Security linting
-- **Safety**: Dependency vulnerability scanning
 - **Codecov**: Code coverage reporting
 - **Dependabot**: Automated dependency updates
 

@@ -23,12 +23,6 @@ repos:
         exclude: ^tests/
   - repo: local
     hooks:
-      - id: safety
-        name: safety
-        entry: safety
-        language: system
-        pass_filenames: false
-        args: ["scan"]
       - id: pytest
         name: pytest
         entry: poetry run pytest

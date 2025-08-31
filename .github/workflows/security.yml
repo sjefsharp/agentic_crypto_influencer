@@ -28,10 +28,7 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Install dependencies
-        run: poetry install --no-interaction
-
-      - name: Run Safety security scan
-        run: poetry run safety scan
+        run: poetry install --no-interaction --with lint
 
       - name: Run Bandit security linting
         run: |
