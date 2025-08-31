@@ -73,7 +73,14 @@ jobs:
             --ignore=tests/test_oauth_handler.py \
             --ignore=tests/test_redis_handler.py \
             --ignore=tests/test_x.py \
+            --junitxml=junit.xml -o junit_family=legacy \
             -k "not test_search_agent_init and not test_publish_agent_init"
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run Bandit security linting
         env:

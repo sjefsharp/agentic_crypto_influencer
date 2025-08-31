@@ -106,9 +106,15 @@ jobs:
           BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY || 'test_key' }}
           BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
         run: |
-          poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+          poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
