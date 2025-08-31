@@ -63,7 +63,7 @@ jobs:
 
       - name: Check test coverage
         run: |
-          COVERAGE=$(poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=term-missing | grep "TOTAL" | awk '{print $4}' | sed 's/%//')
+          COVERAGE=$(poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=term-missing | grep "TOTAL" | awk '{print $6}' | sed 's/%//')
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "❌ Coverage is below 80%: ${COVERAGE}%"
             exit 1
