@@ -8,15 +8,15 @@ on:
     types: [published]
 
 jobs:
-  release:
+  build_and_test:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
-      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -36,23 +36,33 @@ jobs:
 
       - name: Set up test environment
         run: |
-          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "X_URL=https://api.twitter.com" >> $GITHUB_ENV
-          echo "X_TWEETS_ENDPOINT=/2/tweets" >> $GITHUB_ENV
-          echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> $GITHUB_ENV
-          echo "X_TOKEN_ENDPOINT=/oauth/access_token" >> $GITHUB_ENV
-          echo "X_PERSONALIZED_TRENDS_ENDPOINT=/1.1/trends/available.json" >> $GITHUB_ENV
+          # Use a dedicated .env file for tests to keep it clean
+          echo "REDIS_URL=redis://localhost:6379" >> .env
+          echo "X_URL=https://api.twitter.com" >> .env
+          echo "X_TWEETS_ENDPOINT=/2/tweets" >> .env
+          echo "X_AUTHORIZE_ENDPOINT=/oauth/authorize" >> .env
+          echo "X_TOKEN_ENDPOINT=/oauth/access_token" >> .env
+          echo "X_PERSONALIZED_TRENDS_ENDPOINT=/1.1/trends/available.json" >> .env
           # Set test values for missing secrets (secrets are automatically available as env vars)
-          [ -z "$GOOGLE_API_KEY" ] && echo "GOOGLE_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$GOOGLE_GENAI_API_KEY" ] && echo "GOOGLE_GENAI_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$X_API_KEY" ] && echo "X_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$X_API_SECRET" ] && echo "X_API_SECRET=test_secret" >> $GITHUB_ENV || true
-          [ -z "$X_ACCESS_TOKEN" ] && echo "X_ACCESS_TOKEN=test_token" >> $GITHUB_ENV || true
-          [ -z "$X_ACCESS_TOKEN_SECRET" ] && echo "X_ACCESS_TOKEN_SECRET=test_secret" >> $GITHUB_ENV || true
-          [ -z "$BITVAVO_API_KEY" ] && echo "BITVAVO_API_KEY=test_key" >> $GITHUB_ENV || true
-          [ -z "$BITVAVO_API_SECRET" ] && echo "BITVAVO_API_SECRET=test_secret" >> $GITHUB_ENV || true
+          [ -z "$GOOGLE_API_KEY" ] && echo "GOOGLE_API_KEY=test_key" >> .env || true
+          [ -z "$GOOGLE_GENAI_API_KEY" ] && echo "GOOGLE_GENAI_API_KEY=test_key" >> .env || true
+          [ -z "$X_API_KEY" ] && echo "X_API_KEY=test_key" >> .env || true
+          [ -z "$X_API_SECRET" ] && echo "X_API_SECRET=test_secret" >> .env || true
+          [ -z "$X_ACCESS_TOKEN" ] && echo "X_ACCESS_TOKEN=test_token" >> .env || true
+          [ -z "$X_ACCESS_TOKEN_SECRET" ] && echo "X_ACCESS_TOKEN_SECRET=test_secret" >> .env || true
+          [ -z "$BITVAVO_API_KEY" ] && echo "BITVAVO_API_KEY=test_key" >> .env || true
+          [ -z "$BITVAVO_API_SECRET" ] && echo "BITVAVO_API_SECRET=test_secret" >> .env || true
 
-      - name: Run tests
+      - name: Run tests with environment variables
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY }}
+          BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET }}
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80
 
       - name: Build package
@@ -76,10 +86,13 @@ jobs:
   deploy-staging:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    needs: [release]
+    needs: [build_and_test]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
 
       - name: Deploy to staging
         run: |
@@ -89,13 +102,14 @@ jobs:
 
   deploy-production:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'release'
-    needs: [release]
-    permissions:
-      contents: read
+    if: github.event_name == 'release'
+    needs: [build_and_test]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
 
       - name: Deploy to production
         run: |
