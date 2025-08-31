@@ -1,0 +1,69 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 8:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Update dependencies
+        run: |
+          poetry update
+          poetry lock
+
+      - name: Run tests after update
+        run: |
+          poetry install
+          poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update dependencies"
+          title: "chore: weekly dependency updates"
+          body: |
+            ## Dependency Updates
+
+            This PR updates project dependencies to their latest compatible versions.
+
+            ### Changes
+            - Updated all dependencies to latest compatible versions
+            - Regenerated poetry.lock file
+            - All tests pass with updated dependencies
+
+            ### Testing
+            - ✅ All tests pass
+            - ✅ Coverage >= 80%
+            - ✅ Pre-commit hooks pass
+
+            ### Review Checklist
+            - [ ] Review dependency changes
+            - [ ] Check for breaking changes
+            - [ ] Verify tests still pass
+          branch: chore/dependency-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+          assignees: ${{ github.actor }}

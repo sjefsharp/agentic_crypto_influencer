@@ -1,0 +1,74 @@
+name: Security Scan
+
+on:
+  schedule:
+    # Run daily at 6:00 UTC
+    - cron: "0 6 * * *"
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run Safety security scan
+        run: poetry run safety scan
+
+      - name: Run Bandit security linting
+        run: |
+          poetry run bandit -r src/ -c pyproject.toml -f json -o bandit-report.json || true
+
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+      - name: CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+
+  vulnerability-alert:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && failure()
+    needs: [security-scan]
+
+    steps:
+      - name: Create security issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Security vulnerabilities detected',
+              body: 'Security scan has detected vulnerabilities. Please review the latest security scan results.',
+              labels: ['security', 'urgent']
+            })
