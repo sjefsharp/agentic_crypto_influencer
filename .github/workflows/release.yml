@@ -85,7 +85,7 @@ jobs:
           NEW_VERSION=$(poetry version --short)
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add pyproject.toml poetry.lock
+          git add pyproject.toml
           git commit -m "chore: bump version to $NEW_VERSION" || true
           git tag "v$NEW_VERSION"
 
