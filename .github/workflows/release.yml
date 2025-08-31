@@ -81,8 +81,10 @@ jobs:
           fi
 
       - name: Create tag
+        id: create_tag
         run: |
           NEW_VERSION=$(poetry version --short)
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add pyproject.toml
@@ -94,12 +96,12 @@ jobs:
           git push origin main --tags
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v$(poetry version --short)
-          release_name: Release v$(poetry version --short)
+          tag_name: v${{ steps.create_tag.outputs.version }}
+          name: Release v${{ steps.create_tag.outputs.version }}
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
@@ -111,7 +113,7 @@ jobs:
       - name: Notify on success
         if: success()
         run: |
-          echo "🎉 Release v$(poetry version --short) successfully created and published!"
+          echo "🎉 Release v${{ steps.create_tag.outputs.version }} successfully created and published!"
 
       - name: Notify on failure
         if: failure()
