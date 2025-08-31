@@ -42,7 +42,7 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        authorization_url, state = oauth.authorization_url(
+        authorization_url, state = oauth.authorization_url(  # type: ignore[no-untyped-call]
             self.auth_url, code_challenge=code_challenge, code_challenge_method="S256"
         )
         self.redis_handler.set("oauth_state", state)
@@ -56,7 +56,7 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        token = oauth.fetch_token(
+        token = oauth.fetch_token(  # type: ignore[no-untyped-call]
             token_url=self.token_url,
             client_secret=self.client_secret,
             code_verifier=code_verifier.decode("utf-8"),
@@ -75,7 +75,7 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        new_token = oauth.refresh_token(
+        new_token = oauth.refresh_token(  # type: ignore[no-untyped-call]
             token_url=self.token_url,
             client_id=self.client_id,
             client_secret=self.client_secret,

@@ -1,6 +1,6 @@
 from typing import Any
 
-from python_bitvavo_api.bitvavo import Bitvavo
+from python_bitvavo_api.bitvavo import Bitvavo  # type: ignore[import-untyped]
 
 from src.agentic_crypto_influencer.config.key_constants import BITVAVO_API_KEY, BITVAVO_API_SECRET
 
@@ -12,7 +12,7 @@ class BitvavoHandler:
     def get_market_data(self, market: str) -> dict[str, Any] | None:
         """Fetch current market data for a specific market."""
         try:
-            response: dict[str, Any] | None = self.client.tickerPrice({"market": market})
+            response: dict[str, Any] | None = self.client.tickerPrice({"market": market})  # type: ignore[no-untyped-call]
             return response
         except Exception as e:
             raise RuntimeError(f"Failed to fetch market data: {e!s}") from e

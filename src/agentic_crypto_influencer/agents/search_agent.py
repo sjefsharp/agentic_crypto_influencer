@@ -1,10 +1,11 @@
-from agentic_crypto_influencer.config.search_agent_constants import (
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+from src.agentic_crypto_influencer.config.search_agent_constants import (
     SEARCH_AGENT_NAME,
     SEARCH_AGENT_SYSTEM_MESSAGE,
 )
-from agentic_crypto_influencer.tools.google_grounding_tool import GoogleGroundingTool
-from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from src.agentic_crypto_influencer.tools.google_grounding_tool import GoogleGroundingTool
 
 
 class SearchAgent(AssistantAgent):  # type: ignore[misc]

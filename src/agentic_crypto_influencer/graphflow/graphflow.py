@@ -1,17 +1,19 @@
 import asyncio
-from json import JSONDecodeError
+from collections.abc import Mapping
+import json
+from typing import Any
 
-from agentic_crypto_influencer.agents.publish_agent import PublishAgent
-from agentic_crypto_influencer.agents.search_agent import SearchAgent
-from agentic_crypto_influencer.agents.summary_agent import SummaryAgent
-from agentic_crypto_influencer.config.key_constants import GOOGLE_GENAI_API_KEY
-from agentic_crypto_influencer.config.model_constants import MODEL_ID
-from agentic_crypto_influencer.error_management.error_manager import ErrorManager
-from agentic_crypto_influencer.tools.redis_handler import RedisHandler
 from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import DiGraphBuilder, GraphFlow
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from flask import json
+
+from src.agentic_crypto_influencer.agents.publish_agent import PublishAgent
+from src.agentic_crypto_influencer.agents.search_agent import SearchAgent
+from src.agentic_crypto_influencer.agents.summary_agent import SummaryAgent
+from src.agentic_crypto_influencer.config.key_constants import GOOGLE_GENAI_API_KEY
+from src.agentic_crypto_influencer.config.model_constants import MODEL_ID
+from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager
+from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 
 error_manager = ErrorManager()
 
@@ -46,16 +48,13 @@ async def main() -> None:
         )
         redis_handler = RedisHandler()
 
-        team_state = None
-
         # Load team_state from Redis if available
-        redis_team_state = redis_handler.get("team_state")
-        if redis_team_state:
-            try:
-                team_state = json.loads(redis_team_state)
-                await flow.load_state(team_state)
-            except JSONDecodeError:
-                team_state = None
+        redis_team_state_bytes = redis_handler.get("team_state")
+        redis_team_state: str = (
+            redis_team_state_bytes.decode("utf-8") if redis_team_state_bytes else "{}"
+        )
+        team_state: Mapping[str, Any] = json.loads(redis_team_state)
+        await flow.load_state(team_state)
 
         stream = flow.run_stream(
             task="Process the latest crypto news and publish a compliant, high-quality tweet to X."
@@ -65,9 +64,7 @@ async def main() -> None:
             print(event)
 
         team_state = await flow.save_state()
-        if team_state:
-            # Save team_state to Redis
-            redis_handler.set("team_state", json.dumps(team_state))
+        redis_handler.set("team_state", json.dumps(team_state))
     except Exception as e:
         error_message = error_manager.handle_error(e)
         print(error_message)
