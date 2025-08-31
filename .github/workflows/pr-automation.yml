@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   pr-checks:
+    name: PR Check, Walk the Plank!
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 

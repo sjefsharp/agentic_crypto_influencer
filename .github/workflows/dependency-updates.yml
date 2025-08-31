@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   update-dependencies:
+    name: Update Dependencies, Ye Treasure Hunter!
     runs-on: ubuntu-latest
 
     steps:

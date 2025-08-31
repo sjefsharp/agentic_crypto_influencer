@@ -9,6 +9,7 @@ on:
 
 jobs:
   build_and_test:
+    name: Build & Test, Ye Landlubber!
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -90,6 +91,7 @@ jobs:
           path: dist/
 
   deploy-staging:
+    name: Deploy to Staging, Ahoy!
     runs-on: ubuntu-latest
     permissions: {}
     if: github.ref == 'refs/heads/develop'
@@ -108,6 +110,7 @@ jobs:
           # For example: docker build, docker push, kubectl apply, etc.
 
   deploy-production:
+    name: Deploy to Production, Shiver Me Timbers!
     runs-on: ubuntu-latest
     permissions: {}
     if: github.event_name == 'release'
