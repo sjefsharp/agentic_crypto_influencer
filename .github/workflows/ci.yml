@@ -108,11 +108,13 @@ jobs:
         run: |
           poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
 
+      # Upload code coverage data to Codecov (shows coverage percentages)
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      # Upload test execution results to Codecov (shows test details, failures, etc.)
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1

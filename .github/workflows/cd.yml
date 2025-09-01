@@ -69,6 +69,7 @@ jobs:
           BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
 
+      # Upload test execution results to Codecov (shows test details, failures, etc.)
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1

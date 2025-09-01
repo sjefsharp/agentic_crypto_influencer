@@ -75,6 +75,7 @@ jobs:
             --junitxml=junit.xml -o junit_family=legacy \
             -k "not test_search_agent_init and not test_publish_agent_init"
 
+      # Upload test execution results to Codecov (shows test details, failures, etc.)
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
