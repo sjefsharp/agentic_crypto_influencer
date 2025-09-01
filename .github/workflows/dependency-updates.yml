@@ -38,10 +38,9 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install dependencies
-        run: poetry install --no-interaction
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
 
+      - name: Update dependencies
+        run: poetry update
       - name: Run tests after update
         env:
           # Configuration variables (safe to use vars.)
