@@ -15,8 +15,64 @@ permissions:
   pull-requests: write
 
 jobs:
-  pr-checks:
-    name: PR Check, Walk the Plank!
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with lint
+
+      - name: Run Ruff checks
+        run: poetry run ruff check src/ tests/
+
+      - name: Run Ruff formatting check
+        run: poetry run ruff format --check src/ tests/
+
+      - name: Run MyPy type checking
+        run: poetry run mypy src/
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run Bandit security linting
+        run: poetry run bandit -r src/ -c pyproject.toml
+
+  test:
+    name: test
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 
@@ -75,9 +131,6 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run Bandit security linting
-        run: poetry run bandit -r src/ -c pyproject.toml || true
 
       - name: Comment PR with coverage
         uses: dorny/test-reporter@v1
