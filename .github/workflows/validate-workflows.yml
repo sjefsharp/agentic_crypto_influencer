@@ -3,10 +3,10 @@ name: Validate Workflows
 on:
   push:
     paths:
-      - '.github/workflows/**'
+      - ".github/workflows/**"
   pull_request:
     paths:
-      - '.github/workflows/**'
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
     name: Validate GitHub Actions Workflows
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
