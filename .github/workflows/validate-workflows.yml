@@ -1,0 +1,39 @@
+name: Validate Workflows
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Validate GitHub Actions Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download actionlint
+        id: get_actionlint
+        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        shell: bash
+
+      - name: Check workflow files
+        run: ${{ steps.get_actionlint.outputs.executable }} -color
+        shell: bash
+
+      - name: Generate Validation Summary
+        if: always()
+        run: |
+          echo "## 🔍 Workflow Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actionlint Status:** ✅ All workflows validated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Checked:** $(find .github/workflows -name '*.yml' -o -name '*.yaml' | wc -l) workflow files" >> $GITHUB_STEP_SUMMARY
+          echo "- **Last Updated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

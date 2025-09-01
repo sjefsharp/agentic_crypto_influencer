@@ -3,7 +3,20 @@ name: CD
 on:
   push:
     tags:
-      - "v*.*.*"
+         - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        id: cache-poetry
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+        if: steps.cache-poetry.outputs.cache-hit != 'true'
   release:
     types: [published]
 
@@ -11,6 +24,7 @@ jobs:
   build_and_test:
     name: Build & Test, Ye Landlubber!
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: read
@@ -32,16 +46,20 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
+      - name: Cache Poetry dependencies
         uses: actions/cache@v4
+        id: cache-poetry
         with:
-          path: .venv
-          key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install dependencies
         run: poetry install --no-interaction
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        if: steps.cache-poetry.outputs.cache-hit != 'true'
 
       - name: Run tests
         env:
@@ -70,11 +88,11 @@ jobs:
         run: poetry run pytest --cov=src/agentic_crypto_influencer --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
 
       # Upload test execution results to Codecov (shows test details, failures, etc.)
-      - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+      - name: Test Summary
+        uses: test-summary/action@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          paths: "test-results.xml"
+        if: always()
 
       - name: Run Bandit security linting
         run: poetry run bandit -r src/ -c pyproject.toml || true
@@ -116,21 +134,12 @@ jobs:
           # Add your staging deployment commands here
           # For example: docker build, docker push, kubectl apply, etc.
 
-  deploy-production:
-    name: Deploy to Production, Shiver Me Timbers!
+  deploy:
+    name: Deploy to Production
     runs-on: ubuntu-latest
-    permissions: {}
-    if: github.event_name == 'release'
+    timeout-minutes: 20
     needs: [build_and_test]
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-
-      - name: Deploy to production
-        run: |
-          echo "🎯 Deploying to production environment"
-          # Add your production deployment commands here
-          # For example: docker build, docker push, kubectl apply, etc.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write

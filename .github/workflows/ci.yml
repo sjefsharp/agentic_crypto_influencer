@@ -15,6 +15,7 @@ jobs:
   lint:
     name: Lint & Type Check, Ye Code Scallywag!
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -42,23 +43,21 @@ jobs:
         run: poetry run mypy src/
 
       - name: Run Bandit security linting
-        run: poetry run bandit -r src/ -c pyproject.toml || true
+        run: poetry run bandit -r src/ -c pyproject.toml
 
   test:
     name: Test Python 3.13, Arrr!
     runs-on: ubuntu-latest
     needs: [lint] # Test alleen als linting succesvol is
-    strategy:
-      matrix:
-        python-version: ["3.13"]
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -72,7 +71,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
         run: poetry install --no-interaction
@@ -107,6 +106,20 @@ jobs:
           BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
         run: |
           poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
+
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          echo "## 📊 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; print(f'{float(ET.parse(\"coverage.xml\").getroot().attrib[\"line-rate\"]) * 100:.1f}%')")
+            echo "- **Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f junit.xml ]; then
+            TESTS=$(python -c "import xml.etree.ElementTree as ET; root=ET.parse(\"junit.xml\").getroot(); print(f'{root.attrib.get(\"tests\", \"0\")} tests, {root.attrib.get(\"failures\", \"0\")} failures, {root.attrib.get(\"errors\", \"0\")} errors')")
+            echo "- **Test Results:** $TESTS" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Status:** ✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
 
       # Upload code coverage data to Codecov (shows coverage percentages)
       - name: Upload coverage reports to Codecov

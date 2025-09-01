@@ -21,11 +21,15 @@ on:
 
 jobs:
   release:
-    name: Release the Kraken!
+    name: Create Release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
+      packages: write
       pull-requests: write
+      issues: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -44,16 +48,20 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
+      - name: Cache Poetry dependencies
         uses: actions/cache@v4
+        id: cache-poetry
         with:
-          path: .venv
-          key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install dependencies
         run: poetry install --no-interaction
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        if: steps.cache-poetry.outputs.cache-hit != 'true'
 
       - name: Get current version
         id: current_version
