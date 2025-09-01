@@ -6,6 +6,7 @@ Handles access token refresh and error management.
 import logging
 from typing import Any
 
+from src.agentic_crypto_influencer.config.logging_config import LoggerMixin, get_logger
 from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager
 
 # Import tools with external dependencies conditionally
@@ -32,7 +33,7 @@ except ImportError:
 from src.agentic_crypto_influencer.config.key_constants import X_USER_ID
 
 
-class X:
+class X(LoggerMixin):
     """
     Class for interacting with the X (Twitter) API.
 
@@ -43,8 +44,10 @@ class X:
         """
         Initialize X API client.
         """
+        super().__init__()
         # Check if required dependencies are available
         if RedisHandler is None:
+            self.logger.error("RedisHandler is not available")
             raise ImportError(
                 "RedisHandler is not available. Please install required dependencies."
             )
@@ -115,35 +118,37 @@ class X:
 def main() -> None:
     """
     Main entry point for posting a message to X.
-    Handles error management and prints results.
+    Handles error management and logs results.
     """
+    logger = get_logger(__name__)
     error_manager = ErrorManager()
+    
     try:
+        logger.info("Starting X posting workflow")
         x = X()
         post = "Post"
         result: dict[str, Any] = x.post(post)
-        print("--- Post Results ---")
-        print(result)
+        logger.info("Post Results", extra={"result": result})
 
         # Try fetching personalized trends if user id provided via env
         user_id = X_USER_ID
         if user_id:
             try:
                 trends = x.get_personalized_trends(user_id=user_id, max_results=10)
-                print("--- Personalized Trends ---")
-                print(trends)
+                logger.info("Personalized Trends", extra={"trends": trends})
             except Exception as e:
-                logging.error("Failed to fetch personalized trends: %s", str(e))
+                logger.error(f"Failed to fetch personalized trends: {e}")
                 # Surface via error manager as well
-                print(error_manager.handle_error(e))
+                error_message = error_manager.handle_error(e)
+                logger.error(f"Error manager response: {error_message}")
         else:
-            logging.info("X_USER_ID not set; skipping personalized trends fetch")
+            logger.info("X_USER_ID not set; skipping personalized trends fetch")
     except (ValueError, RuntimeError) as e:
         error_message = error_manager.handle_error(e)
-        print(error_message)
+        logger.error(f"Workflow error: {error_message}")
     except Exception as e:
         error_message = error_manager.handle_error(e)
-        print(error_message)
+        logger.critical(f"Unexpected error: {error_message}")
 
 
 if __name__ == "__main__":

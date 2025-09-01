@@ -13,10 +13,12 @@ from src.agentic_crypto_influencer.config.key_constants import (
     X_REDIRECT_URI,
     X_SCOPES,
 )
+from src.agentic_crypto_influencer.config.logging_config import get_logger
 from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager
 from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 
 errormanager = ErrorManager()
+logger = get_logger(__name__)
 
 app = Flask(__name__)
 
@@ -88,8 +90,7 @@ def callback() -> tuple[str, int]:
     code = request.args.get("code")
 
     if code:
-        print("-" * 50)
-        print("Autorisatiecode ontvangen. Tokens ophalen...")
+        logger.info("Authorization code received, fetching tokens...")
 
         # Start een nieuwe thread om de tokens te verkrijgen en op te slaan
         # Dit voorkomt dat de browser vastloopt
@@ -146,14 +147,15 @@ if __name__ == "__main__":
 
     authorization_url = f"{AUTH_URL}?{urllib.parse.urlencode(auth_params)}"
 
-    print("--- Stap 1: Autorisatie ---")
-    print("1. Zorg ervoor dat je dit script draait.")
-    print("2. Ga naar de volgende URL in je browser om toestemming te geven:")
-    print(authorization_url)
-    print(
-        "De server zal automatisch de tokens opslaan en afsluiten nadat je de app "
-        "hebt geautoriseerd."
+    logger.info("Starting authorization process")
+    logger.info("Authorization steps:")
+    logger.info("1. Ensure this script is running")
+    logger.info("2. Go to the following URL in your browser to authorize:")
+    logger.info(f"Authorization URL: {authorization_url}")
+    logger.info(
+        "The server will automatically save tokens and shut down after app authorization"
     )
 
-    # Start de lokale server
+    # Start the local server
+    logger.info("Starting local server on port 5000")
     app.run(port=5000)
