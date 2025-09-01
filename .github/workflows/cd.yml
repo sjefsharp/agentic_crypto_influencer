@@ -3,20 +3,7 @@ name: CD
 on:
   push:
     tags:
-         - name: Cache Poetry dependencies
-        uses: actions/cache@v4
-        id: cache-poetry
-        with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.cache/pip
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
-        if: steps.cache-poetry.outputs.cache-hit != 'true'
+      - "v*"
   release:
     types: [published]
 
@@ -143,3 +130,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    steps:
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to production environment"
+          # Add your production deployment commands here
+          # For example: docker build, docker push, kubectl apply, etc.

@@ -193,10 +193,12 @@ jobs:
 
       - name: PR title validation result
         if: steps.pr-title-check.outcome == 'failure'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           echo "⚠️ PR title doesn't follow conventional commit format"
           echo "Consider updating the PR title to start with: feat:, fix:, docs:, style:, refactor:, perf:, test:, chore:, security:, ci:, or build:"
-          echo "Current title: ${{ github.event.pull_request.title }}"
+          echo "Current title: $PR_TITLE"
 
       - name: Check PR size
         run: |
@@ -210,14 +212,16 @@ jobs:
 
       - name: Label PR based on branch
         if: github.event.pull_request.head.ref != github.event.pull_request.base.ref
+        env:
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [[ "${{ github.event.pull_request.head.ref }}" == feature/* ]]; then
+          if [[ "$BRANCH_NAME" == feature/* ]]; then
             echo "PR from feature branch"
             # Add feature label
-          elif [[ "${{ github.event.pull_request.head.ref }}" == hotfix/* ]]; then
+          elif [[ "$BRANCH_NAME" == hotfix/* ]]; then
             echo "PR from hotfix branch"
             # Add hotfix label
-          elif [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+          elif [[ "$BRANCH_NAME" == release/* ]]; then
             echo "PR from release branch"
             # Add release label
           fi

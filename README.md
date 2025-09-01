@@ -1,237 +1,148 @@
-# Agentic Crypto Influencer
+actionlint
+==========
+[![CI Status][ci-badge]][ci]
+[![API Document][apidoc-badge]][apidoc]
 
-Automate crypto influencer tasks with Python, X (Twitter) API, and Google GenAI.
+[actionlint][repo] is a static checker for GitHub Actions workflow files. [Try it online!][playground]
 
-## 🚀 Quick Start
+Features:
 
-1. **Clone the repository:**
+- **Syntax check for workflow files** to check unexpected or missing keys following [workflow syntax][syntax-doc]
+- **Strong type check for `${{ }}` expressions** to catch several semantic errors like access to not existing property,
+  type mismatches, ...
+- **Actions usage check** to check that inputs at `with:` and outputs in `steps.{id}.outputs` are correct
+- **Reusable workflow check** to check inputs/outputs/secrets of reusable workflows and workflow calls
+- **[shellcheck][] and [pyflakes][] integrations** for scripts at `run:`
+- **Security checks**; [script injection][script-injection-doc] by untrusted inputs, hard-coded credentials
+- **Other several useful checks**; [glob syntax][filter-pattern-doc] validation, dependencies check for `needs:`,
+  runner label validation, cron syntax validation, ...
 
-   ```sh
-   git clone https://github.com/your-username/agentic-crypto-influencer.git
-   cd agentic-crypto-influencer
-   ```
+See the [full list][checks] of checks done by actionlint.
 
-2. **Setup Gitflow (first time only):**
+<img src="https://github.com/rhysd/ss/blob/master/actionlint/main.gif?raw=true" alt="actionlint reports 7 errors" width="806" height="492"/>
 
-   ```sh
-   # Create develop branch
-   git checkout -b develop
-   git push -u origin develop
+**Example of broken workflow:**
 
-   # Setup pre-commit hooks
-   poetry run pre-commit install
-   ```
-
-3. **Install dependencies:**
-
-   ```sh
-   poetry install
-   ```
-
-4. **Configure environment:**
-
-   ```sh
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
-
-5. **Run pre-commit setup:**
-
-   ```sh
-   poetry run pre-commit install
-   ```
-
-6. **Start development:**
-   ```sh
-   poetry run python src/graphflow/graphflow.py
-   ```
-
-## 🏗️ Development Workflow
-
-This project uses **Gitflow** branching strategy. See [docs/GITFLOW.md](docs/GITFLOW.md) for detailed workflow instructions.
-
-### Quick Gitflow Commands
-
-```bash
-# Start a new feature
-git checkout develop
-git pull origin develop
-git checkout -b feature/amazing-feature
-
-# Create a release
-git checkout develop
-git checkout -b release/v1.0.0
-
-# Hotfix for production
-git checkout main
-git checkout -b hotfix/critical-fix
+```yaml
+on:
+  push:
+    branch: main
+    tags:
+      - 'v\d+'
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, linux-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node_version: 18.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
+        if: ${{ github.repository.permissions.admin == true }}
+      - run: npm install && npm test
 ```
 
-### CI/CD Status
+**actionlint reports 7 errors:**
 
-| Workflow        | Status                                                                                                               | Description                      |
-| --------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| 🔄 CI           | ![CI](https://github.com/your-username/agentic-crypto-influencer/workflows/CI/badge.svg)                             | Tests, linting, security scans   |
-| 🚀 CD           | ![CD](https://github.com/your-username/agentic-crypto-influencer/workflows/CD/badge.svg)                             | Automated releases & deployments |
-| 🔒 Security     | ![Security](https://github.com/your-username/agentic-crypto-influencer/workflows/Security/badge.svg)                 | Daily security scans             |
-| 📦 Dependencies | ![Dependencies](https://github.com/your-username/agentic-crypto-influencer/workflows/Dependency%20Updates/badge.svg) | Weekly dependency updates        |
-
-## 📋 Configuration
-
-### Environment Variables Setup
-
-1. **Copy the example file:**
-
-   ```sh
-   cp .env.example .env
-   ```
-
-2. **Fill in your API keys in `.env`:**
-
-   - **X (Twitter) API**: Get credentials from [X Developer Portal](https://developer.x.com/)
-   - **Google API**: Get credentials from [Google Cloud Console](https://console.cloud.google.com/)
-   - **Bitvavo API**: Get credentials from [Bitvavo](https://bitvavo.com/)
-   - **Redis**: Default is `redis://localhost:6379`
-
-3. **Verify your configuration:**
-
-   ```sh
-   python check_env.py
-   ```
-
-4. **Important Security Notes:**
-   - Never commit the `.env` file to version control
-   - The `.env` file is already in `.gitignore`
-   - Share `.env.example` with team members (contains placeholder values)
-   - Each developer should create their own `.env` file
-
-### Required API Keys
-
-- `X_API_CLIENT_ID`, `X_API_CLIENT_SECRET`, `X_API_KEY`, `X_API_SECRET`
-- `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`, `X_BEARER_TOKEN`
-- `GOOGLE_API_KEY`, `GOOGLE_GENAI_API_KEY`, `GOOGLE_CSE_ID`
-- `BITVAVO_API_KEY`, `BITVAVO_API_SECRET`
-- `REDIS_URL` (optional, defaults to localhost)
-
-## Testing
-
-- Tests are located in the `tests/` directory.
-- Run all tests with coverage:
-  ```sh
-  poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=html
-  ```
-- Minimum coverage requirement: **80%**
-
-## 🔧 Code Quality & Automation
-
-### Pre-commit Hooks
-
-This project uses pre-commit hooks for automated code quality checks:
-
-```bash
-# Install hooks
-poetry run pre-commit install
-
-# Run on all files
-poetry run pre-commit run --all-files
-
-# Run specific hook
-poetry run pre-commit run pytest --all-files
+```
+test.yaml:3:5: unexpected key "branch" for "push" section. expected one of "branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore", "types", "workflows" [syntax-check]
+  |
+3 |     branch: main
+  |     ^~~~~~~
+test.yaml:5:11: character '\' is invalid for branch and tag names. only special characters [, ?, +, *, \, ! can be escaped with \. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
+  |
+5 |       - 'v\d+'
+  |           ^~~~
+test.yaml:10:28: label "linux-latest" is unknown. available labels are "windows-latest", "windows-latest-8-cores", "windows-2025", "windows-2022", "windows-2019", "ubuntu-latest", "ubuntu-latest-4-cores", "ubuntu-latest-8-cores", "ubuntu-latest-16-cores", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04", "macos-latest", "macos-latest-xl", "macos-latest-xlarge", "macos-latest-large", "macos-15-xlarge", "macos-15-large", "macos-15", "macos-14-xl", "macos-14-xlarge", "macos-14-large", "macos-14", "macos-13-xl", "macos-13-xlarge", "macos-13-large", "macos-13", "self-hosted", "x64", "arm", "arm64", "linux", "macos", "windows". if it is a custom label for self-hosted runner, set list of labels in actionlint.yaml config file [runner-label]
+   |
+10 |         os: [macos-latest, linux-latest]
+   |                            ^~~~~~~~~~~~~
+test.yaml:13:41: "github.event.head_commit.message" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions for more details [expression]
+   |
+13 |       - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
+   |                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+test.yaml:17:11: input "node_version" is not defined in action "actions/setup-node@v4". available inputs are "always-auth", "architecture", "cache", "cache-dependency-path", "check-latest", "node-version", "node-version-file", "registry-url", "scope", "token" [action]
+   |
+17 |           node_version: 18.x
+   |           ^~~~~~~~~~~~~
+test.yaml:21:20: property "platform" is not defined in object type {os: string} [expression]
+   |
+21 |           key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
+   |                    ^~~~~~~~~~~~~~~
+test.yaml:22:17: receiver of object dereference "permissions" must be type of object but got "string" [expression]
+   |
+22 |         if: ${{ github.repository.permissions.admin == true }}
+   |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
-**Included hooks:**
+## Quick start
 
-- **pytest**: Tests with coverage checking
-- **ruff**: Fast Python linter & formatter
-- **mypy**: Static type checking
-- **bandit**: Security linting
+Install `actionlint` command by downloading [the released binary][releases] or by Homebrew or by `go install`. See
+[the installation document][install] for more details like how to manage the command with several package managers
+or run via Docker container.
 
-### GitHub Actions Workflows
+```sh
+go install github.com/rhysd/actionlint/cmd/actionlint@latest
+```
 
-| Workflow          | Trigger                     | Purpose                          |
-| ----------------- | --------------------------- | -------------------------------- |
-| **CI**            | Push/PR to `main`/`develop` | Tests, linting, security scans   |
-| **CD**            | Release tags                | Automated releases & deployments |
-| **Security**      | Daily + Push/PR             | Security vulnerability scans     |
-| **Dependencies**  | Weekly                      | Automated dependency updates     |
-| **PR Automation** | PR events                   | PR validation & labeling         |
+Basically all you need to do is run the `actionlint` command in your repository. actionlint automatically detects workflows and
+checks errors. actionlint focuses on finding out mistakes. It tries to catch errors as much as possible and make false positives
+as minimal as possible.
 
-### Quality Gates
+```sh
+actionlint
+```
 
-- ✅ **Test Coverage**: ≥ 80%
-- ✅ **Code Quality**: Ruff, MyPy, Bandit
-- ✅ **Security**: CodeQL, Dependency Review
-- ✅ **PR Reviews**: Required for protected branches
-- ✅ **Conventional Commits**: Enforced via PR titles
+Another option to try actionlint is [the online playground][playground]. Your browser can run actionlint through WebAssembly.
 
-## 🔒 Security
+See [the usage document][usage] for more details.
 
-## Cron jobs
+## Documents
 
-- See instructions in README and code for automatic posting.
+- [Checks][checks]: Full list of all checks done by actionlint with example inputs, outputs, and playground links.
+- [Installation][install]: Installation instructions. Prebuilt binaries, a Docker image, building from source, a download script
+  (for CI), supports by several package managers are available.
+- [Usage][usage]: How to use `actionlint` command locally or on GitHub Actions, the online playground, an official Docker image,
+  and integrations with reviewdog, Problem Matchers, super-linter, pre-commit, VS Code.
+- [Configuration][config]: How to configure actionlint behavior. Currently, the labels of self-hosted runners, the configuration
+  variables, and ignore patterns of errors for each file paths can be set.
+- [Go API][api]: How to use actionlint as Go library.
+- [References][refs]: Links to resources.
 
-## Logging
+## Bug reporting
 
-- Logs are written to stdout by default. Adjust logging in the tools for more control.
+When you see some bugs or false positives, it is helpful to [file a new issue][issue-form] with a minimal example
+of input. Giving me some feedbacks like feature requests or ideas of additional checks is also welcome.
 
-## 🤝 Contributing
+See the [contribution guide](./CONTRIBUTING.md) for more details.
 
-We welcome contributions! Please follow our Gitflow workflow and contribution guidelines.
+## License
 
-### Development Process
+actionlint is distributed under [the MIT license](./LICENSE.txt).
 
-1. **Choose the right branch type:**
-
-   - `feature/*` for new features
-   - `hotfix/*` for critical production fixes
-   - `release/*` for release preparation
-
-2. **Follow conventional commits:**
-
-   ```bash
-   git commit -m "feat: add user authentication"
-   git commit -m "fix: resolve memory leak"
-   git commit -m "docs: update API documentation"
-   ```
-
-3. **Create a Pull Request:**
-
-   - Target the correct base branch (`develop` for features, `main` for hotfixes)
-   - Fill out the PR template completely
-   - Ensure all CI checks pass
-   - Request review from maintainers
-
-4. **Code Review Process:**
-   - At least 1 approval required
-   - All CI checks must pass
-   - Coverage must be ≥ 80%
-   - No critical security issues
-
-### Branch Protection
-
-| Branch      | Reviews | CI Required | Up-to-date  |
-| ----------- | ------- | ----------- | ----------- |
-| `main`      | ✅ 1+   | ✅ All      | ✅ Required |
-| `develop`   | ✅ 1+   | ✅ Core     | ✅ Required |
-| `feature/*` | ✅ 1+   | ✅ Core     | ✅ Required |
-
-### Commit Types
-
-- `feat`: New features
-- `fix`: Bug fixes
-- `docs`: Documentation
-- `style`: Code style changes
-- `refactor`: Code refactoring
-- `test`: Testing
-- `chore`: Maintenance
-
-### Getting Help
-
-- 📖 **Documentation**: [docs/GITFLOW.md](docs/GITFLOW.md)
-- 🐛 **Bug Reports**: Use [bug report template](.github/ISSUE_TEMPLATE/bug-report.md)
-- ✨ **Feature Requests**: Use [feature request template](.github/ISSUE_TEMPLATE/feature-request.md)
-- 💬 **Discussions**: GitHub Discussions for questions
-
----
-
-Questions? Open an issue or contact the maintainer.
+[ci-badge]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml/badge.svg
+[ci]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml
+[apidoc-badge]: https://pkg.go.dev/badge/github.com/rhysd/actionlint.svg
+[apidoc]: https://pkg.go.dev/github.com/rhysd/actionlint
+[repo]: https://github.com/rhysd/actionlint
+[playground]: https://rhysd.github.io/actionlint/
+[shellcheck]: https://github.com/koalaman/shellcheck
+[pyflakes]: https://github.com/PyCQA/pyflakes
+[syntax-doc]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+[filter-pattern-doc]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
+[script-injection-doc]: https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
+[releases]: https://github.com/rhysd/actionlint/releases
+[checks]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/checks.md
+[install]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/install.md
+[usage]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/usage.md
+[config]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/config.md
+[api]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/api.md
+[refs]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/reference.md
+[issue-form]: https://github.com/rhysd/actionlint/issues/new

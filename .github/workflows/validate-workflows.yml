@@ -21,14 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download actionlint
-        id: get_actionlint
-        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-        shell: bash
+      - name: Install Actionlint
+        run: |
+          curl -fsSL https://github.com/rhysd/actionlint/releases/latest/download/actionlint_$(curl -s https://api.github.com/repos/rhysd/actionlint/releases/latest | grep -o '"tag_name": "v[^"]*' | cut -d'"' -f4 | sed 's/v//')_linux_amd64.tar.gz | tar -xz
+          chmod +x actionlint
 
-      - name: Check workflow files
-        run: ${{ steps.get_actionlint.outputs.executable }} -color
-        shell: bash
+      - name: Validate Workflows
+        run: ./actionlint -color
 
       - name: Generate Validation Summary
         if: always()
