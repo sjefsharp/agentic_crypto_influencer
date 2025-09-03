@@ -24,9 +24,9 @@ class TestCallbackServer(unittest.TestCase):
     @patch("src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_ID", "test_client_id")
     @patch("src.agentic_crypto_influencer.tools.callback_server.requests.post")
     @patch("src.agentic_crypto_influencer.tools.callback_server.RedisHandler")
-    @patch("src.agentic_crypto_influencer.tools.callback_server.logging.info")
+    @patch("src.agentic_crypto_influencer.tools.callback_server.logger")
     def test_get_and_save_tokens_success(
-        self, mock_logging: Mock, mock_redis_handler_class: Mock, mock_requests_post: Mock
+        self, mock_logger: Mock, mock_redis_handler_class: Mock, mock_requests_post: Mock
     ) -> None:
         """Test successful token retrieval and saving"""
         # Mock the Redis handler
@@ -63,7 +63,7 @@ class TestCallbackServer(unittest.TestCase):
         assert stored_data["refresh_token"] == "test_refresh_token"
 
         # Verify logging
-        assert mock_logging.call_count == 2
+        assert mock_logger.info.call_count == 2
 
     @patch("src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_ID", None)
     def test_get_and_save_tokens_missing_config(self) -> None:
@@ -89,9 +89,9 @@ class TestCallbackServer(unittest.TestCase):
     )
     @patch("src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_ID", "test_client_id")
     @patch("src.agentic_crypto_influencer.tools.callback_server.requests.post")
-    @patch("src.agentic_crypto_influencer.tools.callback_server.errormanager")
+    @patch("src.agentic_crypto_influencer.tools.callback_server.logger")
     def test_get_and_save_tokens_http_error(
-        self, mock_errormanager: Mock, mock_requests_post: Mock
+        self, mock_logger: Mock, mock_requests_post: Mock
     ) -> None:
         """Test token retrieval with HTTP error"""
         # Mock HTTP request to raise exception
@@ -105,61 +105,52 @@ class TestCallbackServer(unittest.TestCase):
         # Verify the result
         assert not result
 
-        # Verify error handling was called
-        mock_errormanager.handle_error.assert_called_once()
+        # Verify error logging was called
+        mock_logger.error.assert_called_once()
 
-    def test_shutdown_route(self) -> None:
-        """Test the shutdown route"""
+    def test_health_route(self) -> None:
+        """Test the health check route"""
+        response = self.app.get("/health")
+        assert response.status_code == 200
+        assert "OAuth Callback Service is healthy" in response.get_data(as_text=True)
+
+    def test_home_route(self) -> None:
+        """Test the home route with valid configuration"""
         with (
-            self.app.application.test_request_context(),
-            patch("src.agentic_crypto_influencer.tools.callback_server.request") as mock_request,
+            patch("src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_ID", "test_id"),
+            patch(
+                "src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_SECRET",
+                "test_secret",
+            ),
+            patch(
+                "src.agentic_crypto_influencer.tools.callback_server.X_REDIRECT_URI",
+                "http://localhost:5000/callback",
+            ),
         ):
-            # Create a mock terminate function that doesn't return a coroutine
-            mock_terminate = Mock()
-            mock_terminate.return_value = None
-            mock_request.environ = {"flask._terminate_server": mock_terminate}
-
-            response = self.app.post("/shutdown")
+            response = self.app.get("/")
             assert response.status_code == 200
-            assert "Server shutting down" in response.get_data(as_text=True)
-
-            # Verify terminate function was called
-            mock_terminate.assert_called_once()
-
-    def test_shutdown_route_no_terminate(self) -> None:
-        """Test shutdown route when terminate function is not available"""
-        with (
-            self.app.application.test_request_context(),
-            patch("src.agentic_crypto_influencer.tools.callback_server.request") as mock_request,
-        ):
-            mock_request.environ.get.return_value = None
-
-            response = self.app.post("/shutdown")
-            assert response.status_code == 500
-            # The error message might be in the response data or in the error logs
             response_text = response.get_data(as_text=True)
-            assert "Internal Server Error" in response_text or "RuntimeError" in response_text
+            assert "X/Twitter OAuth Callback Service" in response_text
+            assert "Authorize with X/Twitter" in response_text
 
-    @patch("src.agentic_crypto_influencer.tools.callback_server.Thread")
+    def test_home_route_missing_config(self) -> None:
+        """Test the home route with missing configuration"""
+        with patch("src.agentic_crypto_influencer.tools.callback_server.X_CLIENT_ID", None):
+            response = self.app.get("/")
+            assert response.status_code == 500
+            response_text = response.get_data(as_text=True)
+            assert "OAuth configuration missing" in response_text
+
     @patch("src.agentic_crypto_influencer.tools.callback_server.get_and_save_tokens")
-    def test_callback_route_success(
-        self, mock_get_and_save_tokens: Mock, mock_thread_class: Mock
-    ) -> None:
+    def test_callback_route_success(self, mock_get_and_save_tokens: Mock) -> None:
         """Test successful callback processing"""
-        # Mock the thread
-        mock_thread = Mock()
-        mock_thread_class.return_value = mock_thread
-
         # Test the route
         response = self.app.get("/callback?code=test_code")
         assert response.status_code == 200
         assert "Autorisatie succesvol" in response.get_data(as_text=True)
 
-        # Verify thread was started
-        mock_thread_class.assert_called_once_with(
-            target=mock_get_and_save_tokens, args=("test_code",)
-        )
-        mock_thread.start.assert_called_once()
+        # Verify get_and_save_tokens was called
+        mock_get_and_save_tokens.assert_called_once_with("test_code")
 
     def test_callback_route_no_code(self) -> None:
         """Test callback route with no authorization code"""
@@ -181,8 +172,9 @@ class TestCallbackServer(unittest.TestCase):
         response = self.app.get("/test_authorization")
         assert response.status_code == 200
         response_text = response.get_data(as_text=True)
-        assert "test_access_token" in response_text
-        assert "test_refresh_token" in response_text
+        # Tokens are masked for security: test_access_token becomes test...oken
+        assert "test...oken" in response_text
+        assert "Tokens gevonden in Redis" in response_text
 
     @patch("src.agentic_crypto_influencer.tools.callback_server.RedisHandler")
     def test_test_authorization_route_no_tokens(self, mock_redis_handler_class: Mock) -> None:

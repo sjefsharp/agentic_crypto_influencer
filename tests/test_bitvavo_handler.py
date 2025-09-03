@@ -45,11 +45,9 @@ def test_get_market_data_client_error(bitvavo_handler: BitvavoHandler) -> None:
     """Test market data retrieval with client error."""
     bitvavo_handler.client.tickerPrice.side_effect = Exception("API Error")
 
-    with pytest.raises(RuntimeError) as exc_info:
-        bitvavo_handler.get_market_data("BTC-EUR")
-
-    assert "Failed to fetch market data" in str(exc_info.value)
-    assert "API Error" in str(exc_info.value)
+    # The method handles errors internally and returns None
+    result = bitvavo_handler.get_market_data("BTC-EUR")
+    assert result is None
 
 
 @pytest.mark.unit  # type: ignore[misc]
@@ -78,8 +76,11 @@ def test_main_success() -> None:
         patch(
             "src.agentic_crypto_influencer.tools.bitvavo_handler.BitvavoHandler"
         ) as mock_handler_class,
-        patch("builtins.print") as mock_print,
+        patch("src.agentic_crypto_influencer.tools.bitvavo_handler.get_logger") as mock_get_logger,
     ):
+        mock_logger = Mock()
+        mock_get_logger.return_value = mock_logger
+
         mock_handler_class.return_value = mock_handler
         mock_handler.get_market_data.return_value = {
             "market": "BTC-USDC",
@@ -95,11 +96,10 @@ def test_main_success() -> None:
         # Verify get_market_data was called with correct market
         mock_handler.get_market_data.assert_called_once_with("BTC-USDC")
 
-        # Verify print was called with success message
-        assert mock_print.call_count == 1
-        args = mock_print.call_args[0]
-        assert args[0] == "Market Data for BTC-USDC:"
-        assert args[1] == {"market": "BTC-USDC", "price": "50000"}
+        # Verify logger was called with success message (check the second call)
+        mock_logger.info.assert_any_call(
+            "Market Data for BTC-USDC: {'market': 'BTC-USDC', 'price': '50000'}"
+        )
 
 
 @pytest.mark.unit  # type: ignore[misc]
@@ -113,8 +113,11 @@ def test_main_error() -> None:
         patch(
             "src.agentic_crypto_influencer.tools.bitvavo_handler.BitvavoHandler"
         ) as mock_handler_class,
-        patch("builtins.print") as mock_print,
+        patch("src.agentic_crypto_influencer.tools.bitvavo_handler.get_logger") as mock_get_logger,
     ):
+        mock_logger = Mock()
+        mock_get_logger.return_value = mock_logger
+
         mock_handler_class.return_value = mock_handler
         mock_handler.get_market_data.side_effect = RuntimeError(
             "Failed to fetch market data: API Error"
@@ -129,9 +132,7 @@ def test_main_error() -> None:
         # Verify get_market_data was called with correct market
         mock_handler.get_market_data.assert_called_once_with("BTC-USDC")
 
-        # Verify error message was printed
-        assert mock_print.call_count == 1
-        # Check that the printed argument is a RuntimeError
-        printed_arg = mock_print.call_args[0][0]
-        assert isinstance(printed_arg, RuntimeError)
-        assert "Failed to fetch market data" in str(printed_arg)
+        # Verify error message was logged
+        mock_logger.error.assert_called_once_with(
+            "Error fetching market data: Failed to fetch market data: API Error"
+        )

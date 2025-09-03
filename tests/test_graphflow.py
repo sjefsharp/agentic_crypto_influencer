@@ -326,9 +326,13 @@ class TestGraphflowMain:
         mock_text_mention_termination: Mock,
     ) -> None:
         """Test main function with async stream iteration."""
-        # Mock environment variable
-        with patch(
-            "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY", "test_key"
+        # Mock environment variable and logging at the start
+        with (
+            patch(
+                "src.agentic_crypto_influencer.graphflow.graphflow.GOOGLE_GENAI_API_KEY",
+                "test_key",
+            ),
+            patch("src.agentic_crypto_influencer.graphflow.graphflow.logger") as mock_logger,
         ):
             mock_openai_client.return_value = Mock()
             mock_text_mention_termination.return_value = Mock()
@@ -367,11 +371,22 @@ class TestGraphflowMain:
             # Mock error manager
             mock_error_manager.handle_error.return_value = "Handled Error"
 
-            # Capture print output
-            with patch("builtins.print") as mock_print:
-                # Run the main function
-                asyncio.run(main())
+            # Run the main function
+            asyncio.run(main())
 
-                # Verify the async for loop executed and printed events
-                mock_print.assert_any_call("event1")
-                mock_print.assert_any_call("event2")
+            # Verify the async for loop executed and logged events
+            # Check that workflow events were logged with correct extra data
+            mock_logger.info.assert_any_call(
+                "Workflow event 1",
+                extra={
+                    "event_number": 1,
+                    "event_preview": "event1",  # First 200 chars of "event1"
+                },
+            )
+            mock_logger.info.assert_any_call(
+                "Workflow event 2",
+                extra={
+                    "event_number": 2,
+                    "event_preview": "event2",  # First 200 chars of "event2"
+                },
+            )

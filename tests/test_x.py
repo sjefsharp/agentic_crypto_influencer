@@ -157,18 +157,24 @@ class TestXComprehensive:
 
         with (
             patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", "test_user_id"),
-            patch("builtins.print") as mock_print,
+            patch("src.agentic_crypto_influencer.tools.x.get_logger") as mock_get_logger,
         ):
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+
             # Import and run main
             from src.agentic_crypto_influencer.tools.x import main
 
             main()
 
-        # Verify calls
-        mock_print.assert_any_call("--- Post Results ---")
-        mock_print.assert_any_call({"id": "123", "text": "Test post"})
-        mock_print.assert_any_call("--- Personalized Trends ---")
-        mock_print.assert_any_call({"trends": ["#Bitcoin"]})
+        # Verify logger calls
+        mock_logger.info.assert_any_call("Starting X posting workflow")
+        mock_logger.info.assert_any_call(
+            "Post Results", extra={"result": {"id": "123", "text": "Test post"}}
+        )
+        mock_logger.info.assert_any_call(
+            "Personalized Trends", extra={"trends": {"trends": ["#Bitcoin"]}}
+        )
 
     @patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
     @patch("src.agentic_crypto_influencer.tools.x.X")
@@ -185,17 +191,23 @@ class TestXComprehensive:
         mock_error_manager_class.return_value = mock_error_manager
 
         with (
-            patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", ""),
-            patch("builtins.print") as mock_print,
+            patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", None),
+            patch("src.agentic_crypto_influencer.tools.x.get_logger") as mock_get_logger,
         ):
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+
             # Import and run main
             from src.agentic_crypto_influencer.tools.x import main
 
             main()
 
-        # Verify calls
-        mock_print.assert_any_call("--- Post Results ---")
-        mock_print.assert_any_call({"id": "123", "text": "Test post"})
+        # Verify logger calls - should post but not get trends
+        mock_logger.info.assert_any_call("Starting X posting workflow")
+        mock_logger.info.assert_any_call(
+            "Post Results", extra={"result": {"id": "123", "text": "Test post"}}
+        )
+        mock_logger.info.assert_any_call("X_USER_ID not set; skipping personalized trends fetch")
 
     @patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
     @patch("src.agentic_crypto_influencer.tools.x.X")
@@ -214,13 +226,16 @@ class TestXComprehensive:
 
         with (
             patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", ""),
-            patch("builtins.print") as mock_print,
+            patch("src.agentic_crypto_influencer.tools.x.get_logger") as mock_get_logger,
         ):
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+
             # Import and run main
             from src.agentic_crypto_influencer.tools.x import main
 
             main()
 
-        # Verify error handling
+        # Verify error handling and logging
         mock_error_manager.handle_error.assert_called_once_with(mock_x.post.side_effect)
-        mock_print.assert_called_once_with("Handled error message")
+        mock_logger.error.assert_any_call("Workflow error: Handled error message")

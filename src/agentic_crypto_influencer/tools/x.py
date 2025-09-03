@@ -122,7 +122,7 @@ def main() -> None:
     """
     logger = get_logger(__name__)
     error_manager = ErrorManager()
-    
+
     try:
         logger.info("Starting X posting workflow")
         x = X()

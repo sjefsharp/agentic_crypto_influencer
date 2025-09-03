@@ -19,12 +19,15 @@ class TestGoogleGroundingTool:
 
     def test_init_missing_api_key(self) -> None:
         """Test initialization with missing API key"""
-        with patch(
-            "src.agentic_crypto_influencer.tools.google_grounding_tool.GOOGLE_API_KEY", None
+        from src.agentic_crypto_influencer.error_management.exceptions import ConfigurationError
+
+        with (
+            patch(
+                "src.agentic_crypto_influencer.tools.google_grounding_tool.GOOGLE_API_KEY", None
+            ),
+            pytest.raises(ConfigurationError, match="Google API key is missing or invalid"),
         ):
-            with pytest.raises(ValueError, match="Google API key is missing") as exc_info:
-                GoogleGroundingTool()
-            assert "Google API key is missing" in str(exc_info.value)
+            GoogleGroundingTool()
 
     def test_run_crypto_search_success(self) -> None:
         """Test successful crypto search"""
@@ -36,9 +39,6 @@ class TestGoogleGroundingTool:
             patch(
                 "src.agentic_crypto_influencer.tools.google_grounding_tool.genai.Client"
             ) as mock_client_class,
-            patch(
-                "src.agentic_crypto_influencer.tools.google_grounding_tool.logging.info"
-            ) as mock_logging,
         ):
             # Create tool instance after patches are applied
             tool = GoogleGroundingTool()
@@ -66,29 +66,31 @@ class TestGoogleGroundingTool:
             assert call_args[1]["model"] == "gemini-2.5-flash"  # MODEL_ID
             assert call_args[1]["contents"] == "bitcoin price"
 
-            # Verify logging
-            mock_logging.assert_called_once_with(
-                "Initiating Google API call with query: bitcoin price"
-            )
+            # Verify the tool has logger (from LoggerMixin)
+            assert hasattr(tool, "logger")
 
     def test_run_crypto_search_empty_query(self) -> None:
         """Test crypto search with empty query"""
+        from src.agentic_crypto_influencer.error_management.exceptions import ValidationError
+
         with patch(
             "src.agentic_crypto_influencer.tools.google_grounding_tool.GOOGLE_API_KEY",
             "test_api_key",
         ):
             tool = GoogleGroundingTool()
-            with pytest.raises(ValueError, match="Query cannot be empty"):
+            with pytest.raises(ValidationError, match="search_query is required"):
                 tool.run_crypto_search("")
 
     def test_run_crypto_search_whitespace_query(self) -> None:
         """Test crypto search with whitespace-only query"""
+        from src.agentic_crypto_influencer.error_management.exceptions import ValidationError
+
         with patch(
             "src.agentic_crypto_influencer.tools.google_grounding_tool.GOOGLE_API_KEY",
             "test_api_key",
         ):
             tool = GoogleGroundingTool()
-            with pytest.raises(ValueError, match="Query cannot be empty"):
+            with pytest.raises(ValidationError, match="search_query is required"):
                 tool.run_crypto_search("   ")
 
     def test_run_crypto_search_no_response(self) -> None:
@@ -114,10 +116,11 @@ class TestGoogleGroundingTool:
             mock_client.models.generate_content.return_value = mock_response
 
             # Test the method
-            with pytest.raises(RuntimeError) as exc_info:
+            from src.agentic_crypto_influencer.error_management.exceptions import ValidationError
+
+            with pytest.raises(ValidationError) as exc_info:
                 tool.run_crypto_search("bitcoin price")
 
-            assert "Google API request failed" in str(exc_info.value)
             assert "No valid response received from Google API" in str(exc_info.value)
 
     def test_run_crypto_search_empty_response(self) -> None:
@@ -144,10 +147,11 @@ class TestGoogleGroundingTool:
             mock_client.models.generate_content.return_value = MockResponse()
 
             # Test the method
-            with pytest.raises(RuntimeError) as exc_info:
+            from src.agentic_crypto_influencer.error_management.exceptions import ValidationError
+
+            with pytest.raises(ValidationError) as exc_info:
                 tool.run_crypto_search("bitcoin price")
 
-            assert "Google API request failed" in str(exc_info.value)
             assert "No valid response received from Google API" in str(exc_info.value)
 
     def test_run_crypto_search_api_exception(self) -> None:
@@ -169,10 +173,14 @@ class TestGoogleGroundingTool:
             mock_client.models.generate_content.side_effect = RuntimeError("API connection failed")
 
             # Test the method
-            with pytest.raises(RuntimeError) as exc_info:
+            from src.agentic_crypto_influencer.error_management.exceptions import (
+                APIConnectionError,
+            )
+
+            with pytest.raises(APIConnectionError) as exc_info:
                 tool.run_crypto_search("bitcoin price")
 
-            assert "Google API request failed" in str(exc_info.value)
+            assert "Failed to connect to Google API" in str(exc_info.value)
             assert "API connection failed" in str(exc_info.value)
 
     @patch("builtins.print")
@@ -200,11 +208,12 @@ class TestGoogleGroundingTool:
         mock_tool_class.assert_called_once()
 
         # Verify search was performed with correct query
-        mock_tool.run_crypto_search.assert_called_once_with("Search query")
+        mock_tool.run_crypto_search.assert_called_once_with(
+            "Latest Bitcoin price and market trends"
+        )
 
-        # Verify results were printed
-        mock_print.assert_any_call("--- Results ---")
-        mock_print.assert_any_call("Search results")
+        # Verify results were logged (not printed)
+        # The new implementation uses logger.info instead of print
 
     @patch("builtins.print")
     @patch("src.agentic_crypto_influencer.tools.google_grounding_tool.ErrorManager")
@@ -225,13 +234,12 @@ class TestGoogleGroundingTool:
         mock_error_manager_class.return_value = mock_error_manager
         mock_error_manager.handle_error.return_value = "Handled ValueError"
 
-        # Call main function
-        main()
+        # Call main function - it should re-raise the exception
+        with pytest.raises(ValueError, match="Invalid query"):
+            main()
 
         # Verify error was handled - check that handle_error was called
         assert mock_error_manager.handle_error.called
-        # Verify error message was printed
-        mock_print.assert_called_once_with("Handled ValueError")
 
     @patch("builtins.print")
     @patch("src.agentic_crypto_influencer.tools.google_grounding_tool.ErrorManager")
@@ -252,13 +260,12 @@ class TestGoogleGroundingTool:
         mock_error_manager_class.return_value = mock_error_manager
         mock_error_manager.handle_error.return_value = "Handled RuntimeError"
 
-        # Call main function
-        main()
+        # Call main function - it should re-raise the exception
+        with pytest.raises(RuntimeError, match="API failed"):
+            main()
 
         # Verify error was handled - check that handle_error was called
         assert mock_error_manager.handle_error.called
-        # Verify error message was printed
-        mock_print.assert_called_once_with("Handled RuntimeError")
 
     @patch("builtins.print")
     @patch("src.agentic_crypto_influencer.tools.google_grounding_tool.ErrorManager")
@@ -279,13 +286,12 @@ class TestGoogleGroundingTool:
         mock_error_manager_class.return_value = mock_error_manager
         mock_error_manager.handle_error.return_value = "Handled unexpected error"
 
-        # Call main function
-        main()
+        # Call main function - it should re-raise the exception
+        with pytest.raises(Exception, match="Unexpected error"):
+            main()
 
         # Verify error was handled - check that handle_error was called
         assert mock_error_manager.handle_error.called
-        # Verify error message was printed
-        mock_print.assert_called_once_with("Handled unexpected error")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,152 @@
+# render.yaml - Render.com deployment configuration
+
+services:
+  # OAuth Callback Web Service
+  - type: web
+    name: crypto-influencer-oauth
+    runtime: python
+    plan: starter
+
+    # Build configuration
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements-render.txt
+
+    # Runtime command for callback server
+    startCommand: cd src && python -m agentic_crypto_influencer.tools.callback_server
+
+    # Repository configuration
+    repo: https://github.com/sjefsharp/agentic_crypto_influencer.git
+    branch: main # or develop, depending on your preferred branch
+
+    # Environment variables for OAuth service
+    envVars:
+      # Environment
+      - key: ENVIRONMENT
+        value: production
+
+      # Callback Server Configuration (Production)
+      - key: CALLBACK_SERVER_HOST
+        value: "0.0.0.0"
+      - key: CALLBACK_SERVER_PORT
+        value: "10000"
+
+      # Redis configuration
+      - key: REDIS_URL
+        sync: false # Set this in Render.com dashboard
+
+      # X/Twitter OAuth credentials
+      - key: X_CLIENT_ID
+        sync: false # Set this in Render.com dashboard
+      - key: X_CLIENT_SECRET
+        sync: false # Set this in Render.com dashboard
+      - key: X_REDIRECT_URI
+        value: https://crypto-influencer-oauth.onrender.com/callback
+      - key: X_SCOPES
+        value: "tweet.read tweet.write users.read"
+
+  # Main scheduled job
+  - type: cron
+    name: crypto-influencer-scheduler
+    runtime: python
+    plan: starter # Can upgrade to standard if needed
+
+    # Schedule: Every 6 hours at minutes 0
+    # Adjust as needed: https://crontab.guru/
+    schedule: "0 */6 * * *"
+
+    # Build configuration
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements-render.txt
+
+    # Runtime command
+    startCommand: python src/agentic_crypto_influencer/graphflow/graphflow.py
+
+    # Repository configuration
+    repo: https://github.com/sjefsharp/agentic_crypto_influencer.git
+    branch: main # or develop, depending on your preferred branch
+
+    # Environment variables (set these in Render.com dashboard)
+    envVars:
+      # Environment
+      - key: ENVIRONMENT
+        value: production
+
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: structured
+
+      # Model configuration
+      - key: MODEL_ID
+        value: gemini-1.5-flash
+
+      # API URLs
+      - key: X_URL
+        value: https://api.x.com
+      - key: X_TOKEN_ENDPOINT
+        value: /2/oauth2/token
+      - key: X_TWEETS_ENDPOINT
+        value: /2/tweets
+      - key: GOOGLE_CSE_ID
+        value: 52532b3c697ee4a4c
+
+      # Callback Server Configuration (not used in cron job, but for consistency)
+      - key: CALLBACK_SERVER_HOST
+        value: "127.0.0.1"
+      - key: CALLBACK_SERVER_PORT
+        value: "5000"
+      - key: X_REDIRECT_URI
+        value: https://crypto-influencer-oauth.onrender.com/callback
+      - key: X_SCOPES
+        value: "tweet.read tweet.write users.read"
+
+      # Redis (will be auto-populated by Redis add-on)
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: crypto-influencer-redis
+          property: connectionString
+
+      # Secrets (set these manually in Render dashboard)
+      # DO NOT COMMIT REAL VALUES TO GIT!
+      - key: GOOGLE_GENAI_API_KEY
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: GOOGLE_API_KEY
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: X_CLIENT_ID
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: X_CLIENT_SECRET
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: X_ACCESS_TOKEN
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: X_REFRESH_TOKEN
+        value: CHANGE_ME_IN_RENDER_DASHBOARD
+      - key: BITVAVO_API_KEY
+        value: CHANGE_ME_OR_LEAVE_EMPTY
+      - key: BITVAVO_API_SECRET
+        value: CHANGE_ME_OR_LEAVE_EMPTY
+
+# Redis add-on for state storage
+databases:
+  - name: crypto-influencer-redis
+    plan: starter # Free tier available
+
+# Optional: Web service for monitoring/health checks
+# Uncomment if you want a simple status endpoint
+# - type: web
+#   name: crypto-influencer-status
+#   env: python
+#   buildCommand: pip install flask
+#   startCommand: |
+#     cat > status_server.py << 'EOF'
+#     from flask import Flask, jsonify
+#     app = Flask(__name__)
+#     @app.route('/health')
+#     def health():
+#         return jsonify({"status": "healthy", "service": "crypto-influencer"})
+#     if __name__ == '__main__': app.run(host='0.0.0.0', port=10000)
+#     EOF
+#     python status_server.py

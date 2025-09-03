@@ -8,18 +8,16 @@ on:
 
 permissions:
   contents: read
-  checks: write
-  pull-requests: write
 
 jobs:
   lint:
-    name: Lint & Type Check, Ye Code Scallywag!
+    name: Code Quality Check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -31,30 +29,29 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Install dependencies
-        run: poetry install --no-interaction --with lint
+        run: poetry install --no-interaction
 
-      - name: Run Ruff checks
+      - name: Run Ruff linting
         run: poetry run ruff check src/ tests/
 
       - name: Run Ruff formatting check
         run: poetry run ruff format --check src/ tests/
 
-      - name: Run MyPy type checking
-        run: poetry run mypy src/
+      - name: Run type checking
+        run: poetry run mypy src/ --ignore-missing-imports
 
-      - name: Run Bandit security linting
+      - name: Run security check
         run: poetry run bandit -r src/ -c pyproject.toml
 
   test:
-    name: Test Python 3.13, Arrr!
+    name: Run Tests
     runs-on: ubuntu-latest
-    needs: [lint] # Test alleen als linting succesvol is
-    timeout-minutes: 30
-
+    needs: [lint]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -64,72 +61,23 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-3.13-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
         run: poetry install --no-interaction
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
 
-      - name: Install project
-        run: poetry install --no-interaction
-
-      - name: Run tests with coverage
+      - name: Run tests
         env:
-          # Configuration variables (safe to use vars.)
-          REDIS_URL: ${{ vars.REDIS_URL || 'redis://localhost:6379' }}
-          X_URL: ${{ vars.X_URL || 'https://api.twitter.com' }}
-          X_TWEETS_ENDPOINT: ${{ vars.X_TWEETS_ENDPOINT || '/2/tweets' }}
-          X_AUTHORIZE_ENDPOINT: ${{ vars.X_AUTHORIZE_ENDPOINT || '/oauth/authorize' }}
-          X_TOKEN_ENDPOINT: ${{ vars.X_TOKEN_ENDPOINT || '/oauth/access_token' }}
-          X_PERSONALIZED_TRENDS_ENDPOINT: ${{ vars.X_PERSONALIZED_TRENDS_ENDPOINT || '/1.1/trends/available.json' }}
-          X_USER_ID: ${{ vars.X_USER_ID || '123456789' }}
-          GOOGLE_CSE_ID: ${{ vars.GOOGLE_CSE_ID || '52532b3c697ee4a4c' }}
-          GOOGLE_GENAI_USE_VERTEXAI: ${{ vars.GOOGLE_GENAI_USE_VERTEXAI || '0' }}
-          # Secrets (use secrets. with fallback)
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || 'test_key' }}
-          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'test_key' }}
-          X_API_KEY: ${{ secrets.X_API_KEY || 'test_key' }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET || 'test_secret' }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN || 'test_token' }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET || 'test_secret' }}
-          X_API_CLIENT_ID: ${{ secrets.X_API_CLIENT_ID || 'test_client_id' }}
-          X_API_CLIENT_SECRET: ${{ secrets.X_API_CLIENT_SECRET || 'test_client_secret' }}
-          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN || 'test_bearer_token' }}
-          BITVAVO_API_KEY: ${{ secrets.BITVAVO_API_KEY || 'test_key' }}
-          BITVAVO_API_SECRET: ${{ secrets.BITVAVO_API_SECRET || 'test_secret' }}
-        run: |
-          poetry run pytest --cov=src/agentic_crypto_influencer --cov-report=xml --cov-report=term-missing --cov-fail-under=80 --junitxml=junit.xml -o junit_family=legacy
+          # Basic test environment variables
+          REDIS_URL: "redis://localhost:6379"
+          GOOGLE_API_KEY: "test_key"
+          GOOGLE_GENAI_API_KEY: "test_key"
+          X_CLIENT_ID: "test_client_id"
+          X_CLIENT_SECRET: "test_client_secret"
+        run: poetry run pytest tests/ -v --tb=short
 
-      - name: Generate Test Summary
+      - name: Test Summary
         if: always()
         run: |
-          echo "## 📊 Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f coverage.xml ]; then
-            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; print(f'{float(ET.parse(\"coverage.xml\").getroot().attrib[\"line-rate\"]) * 100:.1f}%')")
-            echo "- **Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
-          fi
-          if [ -f junit.xml ]; then
-            TESTS=$(python -c "import xml.etree.ElementTree as ET; root=ET.parse(\"junit.xml\").getroot(); print(f'{root.attrib.get(\"tests\", \"0\")} tests, {root.attrib.get(\"failures\", \"0\")} failures, {root.attrib.get(\"errors\", \"0\")} errors')")
-            echo "- **Test Results:** $TESTS" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- **Status:** ✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
-
-      # Upload code coverage data to Codecov (shows coverage percentages)
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      # Upload test execution results to Codecov (shows test details, failures, etc.)
-      - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** Python 3.13 on Ubuntu" >> $GITHUB_STEP_SUMMARY

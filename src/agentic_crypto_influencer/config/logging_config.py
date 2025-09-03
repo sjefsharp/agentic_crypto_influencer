@@ -12,25 +12,34 @@ This module provides a structured logging system with:
 import logging
 import logging.config
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict
+import sys
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from typing import override
+else:
+    try:
+        from typing import override
+    except ImportError:
+        from typing import override
 
 from src.agentic_crypto_influencer.config.key_constants import REDIS_URL
 
 
 class StructuredFormatter(logging.Formatter):
     """Custom formatter that adds structured context to log records."""
-    
+
+    @override
     def format(self, record: logging.LogRecord) -> str:
-        # Add context information
-        record.service = "agentic-crypto-influencer"
-        record.version = "0.1.0"
-        
-        # Add Redis connectivity status if available
-        if hasattr(record, 'redis_connected'):
-            record.redis_status = "connected" if record.redis_connected else "disconnected"
-        
+        """Format log record with Redis connection status."""
+        # Check if Redis connection status is available
+        redis_connected = getattr(record, "redis_connected", None)
+        if redis_connected is not None:
+            record.redis_status = "connected" if redis_connected else "disconnected"
+        else:
+            record.redis_status = "unknown"
+
         return super().format(record)
 
 
@@ -44,7 +53,7 @@ def get_log_level() -> str:
 def get_log_format() -> str:
     """Get log format based on environment (structured for production)."""
     is_development = os.getenv("ENVIRONMENT", "development").lower() == "development"
-    
+
     if is_development:
         return (
             "%(asctime)s | %(levelname)-8s | %(name)-20s | "
@@ -63,17 +72,17 @@ def get_log_format() -> str:
 def setup_logging() -> None:
     """
     Configure centralized logging for the entire application.
-    
+
     This function should be called once at application startup.
     """
     log_level = get_log_level()
     log_format = get_log_format()
-    
+
     # Create logs directory if it doesn't exist
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    
-    logging_config: Dict[str, Any] = {
+
+    logging_config: dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
@@ -125,7 +134,7 @@ def setup_logging() -> None:
                 "propagate": False,
             },
             "openai": {
-                "level": "WARNING", 
+                "level": "WARNING",
                 "handlers": ["console"],
                 "propagate": False,
             },
@@ -145,9 +154,9 @@ def setup_logging() -> None:
             "handlers": ["console"],
         },
     }
-    
+
     logging.config.dictConfig(logging_config)
-    
+
     # Log the initialization
     logger = get_logger("config.logging")
     logger.info(
@@ -156,20 +165,20 @@ def setup_logging() -> None:
             "log_level": log_level,
             "environment": os.getenv("ENVIRONMENT", "development"),
             "redis_url_configured": bool(REDIS_URL),
-        }
+        },
     )
 
 
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger instance with consistent naming.
-    
+
     Args:
         name: Logger name, typically module path relative to src/agentic_crypto_influencer
-        
+
     Returns:
         Configured logger instance
-        
+
     Example:
         logger = get_logger("agents.search_agent")
         logger = get_logger("tools.redis_handler")
@@ -177,14 +186,14 @@ def get_logger(name: str) -> logging.Logger:
     # Ensure consistent naming
     if not name.startswith("agentic_crypto_influencer"):
         name = f"agentic_crypto_influencer.{name}"
-    
+
     return logging.getLogger(name)
 
 
 def log_function_call(func_name: str, **kwargs: Any) -> None:
     """
     Log function calls with parameters for debugging.
-    
+
     Args:
         func_name: Name of the function being called
         **kwargs: Function parameters to log
@@ -195,14 +204,14 @@ def log_function_call(func_name: str, **kwargs: Any) -> None:
         extra={
             "function": func_name,
             "parameters": {k: str(v)[:100] for k, v in kwargs.items()},  # Truncate long values
-        }
+        },
     )
 
 
 def log_api_call(service: str, endpoint: str, status_code: int, duration_ms: float) -> None:
     """
     Log API calls with performance metrics.
-    
+
     Args:
         service: Service name (e.g., "x_api", "google_api", "bitvavo")
         endpoint: API endpoint called
@@ -211,7 +220,7 @@ def log_api_call(service: str, endpoint: str, status_code: int, duration_ms: flo
     """
     logger = get_logger("api_calls")
     level = logging.INFO if 200 <= status_code < 400 else logging.ERROR
-    
+
     logger.log(
         level,
         f"API call to {service}",
@@ -221,20 +230,20 @@ def log_api_call(service: str, endpoint: str, status_code: int, duration_ms: flo
             "status_code": status_code,
             "duration_ms": round(duration_ms, 2),
             "success": 200 <= status_code < 400,
-        }
+        },
     )
 
 
 class LoggerMixin:
     """
     Mixin class to add logging capabilities to any class.
-    
+
     Usage:
         class MyClass(LoggerMixin):
             def some_method(self):
                 self.logger.info("Something happened")
     """
-    
+
     @property
     def logger(self) -> logging.Logger:
         """Get logger for this class."""

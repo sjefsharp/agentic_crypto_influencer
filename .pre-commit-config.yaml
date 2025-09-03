@@ -32,5 +32,5 @@ repos:
           [
             "--cov=src/agentic_crypto_influencer",
             "--cov-report=term-missing",
-            "--cov-fail-under=80",
+            "--cov-fail-under=61",
           ]

@@ -1,21 +1,30 @@
 import asyncio
-import json
-import sys
 from collections.abc import Mapping
+import json
+from pathlib import Path
+import sys
 from typing import Any
 
-from autogen_agentchat.conditions import TextMentionTermination
-from autogen_agentchat.teams import DiGraphBuilder, GraphFlow
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+# Add project root to Python path for compatibility
+project_root = Path(__file__).parent.parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-from src.agentic_crypto_influencer.agents.publish_agent import PublishAgent
-from src.agentic_crypto_influencer.agents.search_agent import SearchAgent
-from src.agentic_crypto_influencer.agents.summary_agent import SummaryAgent
-from src.agentic_crypto_influencer.config.key_constants import GOOGLE_GENAI_API_KEY
-from src.agentic_crypto_influencer.config.logging_config import get_logger, setup_logging
-from src.agentic_crypto_influencer.config.model_constants import MODEL_ID
-from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager
-from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
+from autogen_agentchat.conditions import TextMentionTermination  # noqa: E402
+from autogen_agentchat.teams import DiGraphBuilder, GraphFlow  # noqa: E402
+from autogen_ext.models.openai import OpenAIChatCompletionClient  # noqa: E402
+
+from src.agentic_crypto_influencer.agents.publish_agent import PublishAgent  # noqa: E402
+from src.agentic_crypto_influencer.agents.search_agent import SearchAgent  # noqa: E402
+from src.agentic_crypto_influencer.agents.summary_agent import SummaryAgent  # noqa: E402
+from src.agentic_crypto_influencer.config.key_constants import GOOGLE_GENAI_API_KEY  # noqa: E402
+from src.agentic_crypto_influencer.config.logging_config import (  # noqa: E402
+    get_logger,
+    setup_logging,
+)
+from src.agentic_crypto_influencer.config.model_constants import MODEL_ID  # noqa: E402
+from src.agentic_crypto_influencer.error_management.error_manager import ErrorManager  # noqa: E402
+from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler  # noqa: E402
 
 # Initialize logging
 setup_logging()
@@ -29,9 +38,9 @@ async def main() -> None:
         error_msg = "GOOGLE_GENAI_API_KEY environment variable is required"
         logger.error(error_msg)
         raise ValueError(error_msg)
-        
+
     logger.info("Starting crypto influencer workflow", extra={"model_id": MODEL_ID})
-    
+
     try:
         # Initialize model client
         logger.debug("Initializing OpenAI model client")
@@ -61,7 +70,7 @@ async def main() -> None:
             graph=graph,
             termination_condition=termination_condition,
         )
-        
+
         # Initialize Redis handler
         logger.debug("Initializing Redis handler")
         redis_handler = RedisHandler()
@@ -74,9 +83,12 @@ async def main() -> None:
         )
         team_state: Mapping[str, Any] = json.loads(redis_team_state)
         await flow.load_state(team_state)
-        
+
         if team_state:
-            logger.info("Loaded existing team state from Redis", extra={"state_keys": list(team_state.keys())})
+            logger.info(
+                "Loaded existing team state from Redis",
+                extra={"state_keys": list(team_state.keys())},
+            )
         else:
             logger.info("No existing team state found, starting fresh")
 
@@ -94,29 +106,29 @@ async def main() -> None:
                 extra={
                     "event_number": event_count,
                     "event_preview": str(event)[:200],  # First 200 chars for logging
-                }
+                },
             )
 
         # Save state back to Redis
         logger.debug("Saving team state to Redis")
         team_state = await flow.save_state()
         redis_handler.set("team_state", json.dumps(team_state))
-        
+
         logger.info(
             "Workflow completed successfully",
             extra={
                 "total_events": event_count,
                 "state_saved": True,
-            }
+            },
         )
-        
+
     except Exception as e:
         error_message = error_manager.handle_error(
             e,
             context={
                 "workflow": "crypto_influencer",
                 "model_id": MODEL_ID,
-            }
+            },
         )
         logger.critical(f"Workflow failed: {error_message}")
 
