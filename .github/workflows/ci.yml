@@ -78,6 +78,8 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
-          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** ✅ Tests completed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** Python 3.13 on Ubuntu" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🧪 Test Results"
+            echo "- **Status:** ✅ Tests completed"
+            echo "- **Environment:** Python 3.13 on Ubuntu"
+          } >> "$GITHUB_STEP_SUMMARY"
