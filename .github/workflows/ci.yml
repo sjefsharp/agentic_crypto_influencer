@@ -80,7 +80,7 @@ jobs:
       - name: Test Summary
         if: always()
         run: |
-          if [ $? -eq 0 ]; then
+          if [ "${{ job.status }}" = "success" ]; then
             STATUS="✅ Tests passed"
           else
             STATUS="❌ Tests failed"
