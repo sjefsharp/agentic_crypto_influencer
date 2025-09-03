@@ -73,13 +73,20 @@ jobs:
           GOOGLE_GENAI_API_KEY: "test_key"
           X_CLIENT_ID: "test_client_id"
           X_CLIENT_SECRET: "test_client_secret"
+          BITVAVO_API_KEY: "test_bitvavo_key"
+          BITVAVO_API_SECRET: "test_bitvavo_secret"
         run: poetry run pytest tests/ -v --tb=short
 
       - name: Test Summary
         if: always()
         run: |
+          if [ $? -eq 0 ]; then
+            STATUS="✅ Tests passed"
+          else
+            STATUS="❌ Tests failed"
+          fi
           {
             echo "## 🧪 Test Results"
-            echo "- **Status:** ✅ Tests completed"
+            echo "- **Status:** $STATUS"
             echo "- **Environment:** Python 3.13 on Ubuntu"
           } >> "$GITHUB_STEP_SUMMARY"
