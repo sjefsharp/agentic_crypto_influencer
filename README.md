@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/ci.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/ci.yml)
 [![Validate Workflows](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/validate-workflows.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/validate-workflows.yml)
-[![CodeQL](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/codeql.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/codeql.yml)
 [![Coverage](https://codecov.io/gh/sjefsharp/agentic_crypto_influencer/branch/main/graph/badge.svg)](https://codecov.io/gh/sjefsharp/agentic_crypto_influencer)
 [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Poetry](https://img.shields.io/badge/poetry-dependency%20management-blue.svg)](https://python-poetry.org/)
