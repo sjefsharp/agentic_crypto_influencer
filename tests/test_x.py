@@ -239,3 +239,134 @@ class TestXComprehensive:
         # Verify error handling and logging
         mock_error_manager.handle_error.assert_called_once_with(mock_x.post.side_effect)
         mock_logger.error.assert_any_call("Workflow error: Handled error message")
+
+
+# Additional tests to improve coverage
+@patch("src.agentic_crypto_influencer.tools.x.get_logger")
+@patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
+@patch("src.agentic_crypto_influencer.tools.x.X")
+def test_main_critical_error(
+    mock_x_class: Mock, mock_error_manager_class: Mock, mock_get_logger: Mock
+) -> None:
+    """Test main function handles critical errors."""
+    # Setup mocks
+    mock_error_manager = Mock()
+    mock_error_manager.handle_error.return_value = "Critical error handled"
+    mock_error_manager_class.return_value = mock_error_manager
+
+    mock_x = Mock()
+    mock_x.post.side_effect = Exception("Critical system error")
+    mock_x_class.return_value = mock_x
+
+    mock_logger = Mock()
+    mock_get_logger.return_value = mock_logger
+
+    # Import and run main
+    from src.agentic_crypto_influencer.tools.x import main
+
+    main()
+
+    # Verify critical error handling
+    mock_error_manager.handle_error.assert_called_once_with(mock_x.post.side_effect)
+    mock_logger.critical.assert_any_call("Unexpected error: Critical error handled")
+
+
+@patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", "test_user_123")
+@patch("src.agentic_crypto_influencer.tools.x.get_logger")
+@patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
+@patch("src.agentic_crypto_influencer.tools.x.X")
+def test_main_with_user_id_trends_error(
+    mock_x_class: Mock, mock_error_manager_class: Mock, mock_get_logger: Mock
+) -> None:
+    """Test main function when trends fetching fails but posting succeeds."""
+    # Setup mocks
+    mock_error_manager = Mock()
+    mock_error_manager.handle_error.return_value = "Trends error handled"
+    mock_error_manager_class.return_value = mock_error_manager
+
+    mock_x = Mock()
+    mock_x.post.return_value = {"id": "123", "text": "Post"}
+    mock_x.get_personalized_trends.side_effect = Exception("Trends API failed")
+    mock_x_class.return_value = mock_x
+
+    mock_logger = Mock()
+    mock_get_logger.return_value = mock_logger
+
+    # Import and run main
+    from src.agentic_crypto_influencer.tools.x import main
+
+    main()
+
+    # Verify posting succeeded but trends failed
+    mock_x.post.assert_called_once_with("Post")
+    mock_x.get_personalized_trends.assert_called_once_with(user_id="test_user_123", max_results=10)
+    mock_logger.error.assert_any_call("Failed to fetch personalized trends: Trends API failed")
+    mock_error_manager.handle_error.assert_called_once_with(
+        mock_x.get_personalized_trends.side_effect
+    )
+
+
+@patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", "")
+@patch("src.agentic_crypto_influencer.tools.x.get_logger")
+@patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
+@patch("src.agentic_crypto_influencer.tools.x.X")
+def test_main_no_user_id(
+    mock_x_class: Mock, mock_error_manager_class: Mock, mock_get_logger: Mock
+) -> None:
+    """Test main function when X_USER_ID is not set."""
+    # Setup mocks
+    mock_error_manager = Mock()
+    mock_error_manager_class.return_value = mock_error_manager
+
+    mock_x = Mock()
+    mock_x.post.return_value = {"id": "123", "text": "Post"}
+    mock_x_class.return_value = mock_x
+
+    mock_logger = Mock()
+    mock_get_logger.return_value = mock_logger
+
+    # Import and run main
+    from src.agentic_crypto_influencer.tools.x import main
+
+    main()
+
+    # Verify posting succeeded but no trends fetch attempted
+    mock_x.post.assert_called_once_with("Post")
+    mock_x.get_personalized_trends.assert_not_called()
+    mock_logger.info.assert_any_call("X_USER_ID not set; skipping personalized trends fetch")
+
+
+@patch("src.agentic_crypto_influencer.tools.x.X_USER_ID", "test_user_123")
+@patch("src.agentic_crypto_influencer.tools.x.get_logger")
+@patch("src.agentic_crypto_influencer.tools.x.ErrorManager")
+@patch("src.agentic_crypto_influencer.tools.x.X")
+def test_main_successful_with_trends(
+    mock_x_class: Mock, mock_error_manager_class: Mock, mock_get_logger: Mock
+) -> None:
+    """Test main function successful execution with trends."""
+    # Setup mocks
+    mock_error_manager = Mock()
+    mock_error_manager_class.return_value = mock_error_manager
+
+    mock_x = Mock()
+    mock_x.post.return_value = {"id": "123", "text": "Post"}
+    mock_x.get_personalized_trends.return_value = [{"name": "#Bitcoin", "volume": 12345}]
+    mock_x_class.return_value = mock_x
+
+    mock_logger = Mock()
+    mock_get_logger.return_value = mock_logger
+
+    # Import and run main
+    from src.agentic_crypto_influencer.tools.x import main
+
+    main()
+
+    # Verify successful execution
+    mock_x.post.assert_called_once_with("Post")
+    mock_x.get_personalized_trends.assert_called_once_with(user_id="test_user_123", max_results=10)
+    mock_logger.info.assert_any_call(
+        "Post Results", extra={"result": {"id": "123", "text": "Post"}}
+    )
+    mock_logger.info.assert_any_call(
+        "Personalized Trends", extra={"trends": [{"name": "#Bitcoin", "volume": 12345}]}
+    )

@@ -1,148 +1,328 @@
-actionlint
-==========
-[![CI Status][ci-badge]][ci]
-[![API Document][apidoc-badge]][apidoc]
+# 🤖 Agentic Crypto Influencer Bot
 
-[actionlint][repo] is a static checker for GitHub Actions workflow files. [Try it online!][playground]
+[![CI](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/ci.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/ci.yml)
+[![Validate Workflows](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/validate-workflows.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/validate-workflows.yml)
+[![CodeQL](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/codeql.yml/badge.svg)](https://github.com/sjefsharp/agentic_crypto_influencer/actions/workflows/codeql.yml)
+[![Coverage](https://codecov.io/gh/sjefsharp/agentic_crypto_influencer/branch/main/graph/badge.svg)](https://codecov.io/gh/sjefsharp/agentic_crypto_influencer)
+[![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Poetry](https://img.shields.io/badge/poetry-dependency%20management-blue.svg)](https://python-poetry.org/)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Type Checker: MyPy](https://img.shields.io/badge/type%20checker-mypy-blue.svg)](https://mypy-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Features:
+An intelligent, multi-agent crypto content creation system that autonomously researches, analyzes, and publishes cryptocurrency content to social media platforms.
 
-- **Syntax check for workflow files** to check unexpected or missing keys following [workflow syntax][syntax-doc]
-- **Strong type check for `${{ }}` expressions** to catch several semantic errors like access to not existing property,
-  type mismatches, ...
-- **Actions usage check** to check that inputs at `with:` and outputs in `steps.{id}.outputs` are correct
-- **Reusable workflow check** to check inputs/outputs/secrets of reusable workflows and workflow calls
-- **[shellcheck][] and [pyflakes][] integrations** for scripts at `run:`
-- **Security checks**; [script injection][script-injection-doc] by untrusted inputs, hard-coded credentials
-- **Other several useful checks**; [glob syntax][filter-pattern-doc] validation, dependencies check for `needs:`,
-  runner label validation, cron syntax validation, ...
+## 🌟 Overview
 
-See the [full list][checks] of checks done by actionlint.
+This project implements a sophisticated agentic AI system that operates as an autonomous crypto influencer. It leverages a multi-agent architecture to:
 
-<img src="https://github.com/rhysd/ss/blob/master/actionlint/main.gif?raw=true" alt="actionlint reports 7 errors" width="806" height="492"/>
+- **Research** the latest crypto news and market developments
+- **Analyze** market data from exchanges like Bitvavo
+- **Create** engaging, Twitter-optimized content
+- **Publish** automatically to X (Twitter) and other social platforms
 
-**Example of broken workflow:**
+## 🏗️ Architecture
 
-```yaml
-on:
-  push:
-    branch: main
-    tags:
-      - 'v\d+'
-jobs:
-  test:
-    strategy:
-      matrix:
-        os: [macos-latest, linux-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node_version: 18.x
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-        if: ${{ github.repository.permissions.admin == true }}
-      - run: npm install && npm test
-```
+### Multi-Agent System
 
-**actionlint reports 7 errors:**
+The bot uses **Microsoft AutoGen** framework with a graph-based workflow:
 
 ```
-test.yaml:3:5: unexpected key "branch" for "push" section. expected one of "branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore", "types", "workflows" [syntax-check]
-  |
-3 |     branch: main
-  |     ^~~~~~~
-test.yaml:5:11: character '\' is invalid for branch and tag names. only special characters [, ?, +, *, \, ! can be escaped with \. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
-  |
-5 |       - 'v\d+'
-  |           ^~~~
-test.yaml:10:28: label "linux-latest" is unknown. available labels are "windows-latest", "windows-latest-8-cores", "windows-2025", "windows-2022", "windows-2019", "ubuntu-latest", "ubuntu-latest-4-cores", "ubuntu-latest-8-cores", "ubuntu-latest-16-cores", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04", "macos-latest", "macos-latest-xl", "macos-latest-xlarge", "macos-latest-large", "macos-15-xlarge", "macos-15-large", "macos-15", "macos-14-xl", "macos-14-xlarge", "macos-14-large", "macos-14", "macos-13-xl", "macos-13-xlarge", "macos-13-large", "macos-13", "self-hosted", "x64", "arm", "arm64", "linux", "macos", "windows". if it is a custom label for self-hosted runner, set list of labels in actionlint.yaml config file [runner-label]
-   |
-10 |         os: [macos-latest, linux-latest]
-   |                            ^~~~~~~~~~~~~
-test.yaml:13:41: "github.event.head_commit.message" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions for more details [expression]
-   |
-13 |       - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-   |                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-test.yaml:17:11: input "node_version" is not defined in action "actions/setup-node@v4". available inputs are "always-auth", "architecture", "cache", "cache-dependency-path", "check-latest", "node-version", "node-version-file", "registry-url", "scope", "token" [action]
-   |
-17 |           node_version: 18.x
-   |           ^~~~~~~~~~~~~
-test.yaml:21:20: property "platform" is not defined in object type {os: string} [expression]
-   |
-21 |           key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-   |                    ^~~~~~~~~~~~~~~
-test.yaml:22:17: receiver of object dereference "permissions" must be type of object but got "string" [expression]
-   |
-22 |         if: ${{ github.repository.permissions.admin == true }}
-   |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SearchAgent → SummaryAgent → PublishAgent
 ```
 
-## Quick start
+#### 🔍 **SearchAgent**
 
-Install `actionlint` command by downloading [the released binary][releases] or by Homebrew or by `go install`. See
-[the installation document][install] for more details like how to manage the command with several package managers
-or run via Docker container.
+- Hunts for breaking crypto news from the last 24 hours
+- Prioritizes major price movements, launches, regulations, and security incidents
+- Uses Google Grounding Tool for real-time information gathering
+- Outputs structured JSON with categorized news
 
-```sh
-go install github.com/rhysd/actionlint/cmd/actionlint@latest
+#### 📝 **SummaryAgent**
+
+- Transforms raw news into tweet-ready content
+- Ensures content stays under 280 characters
+- Maintains professional, neutral tone for crypto-savvy audience
+- Includes strategic hashtags and emojis
+
+#### 🚀 **PublishAgent**
+
+- Handles multi-platform publishing (X/Twitter, Threads)
+- Manages OAuth authentication flows
+- Validates content before posting
+- Provides posting analytics and error handling
+
+### 🛠️ Tool Ecosystem
+
+#### **Social Media Tools** (`tools/social_media/`)
+
+- **X Integration**: Full Twitter API v2 support with OAuth 2.0
+- **Threads Support**: Meta Threads API integration
+- **OAuth Handler**: Secure authentication management
+- **Post Handler**: Cross-platform posting utilities
+
+#### **Market Data Tools** (`tools/market_data/`)
+
+- **Bitvavo Handler**: Real-time crypto exchange data
+- **Trends Handler**: Market trend analysis
+- **Google Grounding Tool**: Real-time web search capabilities
+
+#### **Infrastructure** (`tools/infrastructure/`)
+
+- **Redis Handler**: State persistence and caching
+- **Callback Server**: OAuth callback management
+
+#### **Utilities** (`tools/utilities/`)
+
+- **Validator**: Content validation and safety checks
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.13+
+- Poetry for dependency management
+- Redis server (for state persistence)
+- API keys for various services
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/sjefsharp/agentic_crypto_influencer.git
+   cd agentic_crypto_influencer
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   poetry install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+### Required Environment Variables
+
+```bash
+# Core AI Model
+GOOGLE_GENAI_API_KEY=your_google_api_key
+
+# X (Twitter) API
+X_CLIENT_ID=your_x_client_id
+X_CLIENT_SECRET=your_x_client_secret
+X_REDIRECT_URI=http://localhost:3000/callback
+X_USER_ID=your_x_user_id
+
+# Threads API (optional)
+THREADS_APP_ID=your_threads_app_id
+THREADS_APP_SECRET=your_threads_app_secret
+THREADS_ACCESS_TOKEN=your_threads_token
+
+# Bitvavo Exchange
+BITVAVO_API_KEY=your_bitvavo_key
+BITVAVO_API_SECRET=your_bitvavo_secret
+
+# Redis (optional, uses localhost:6379 by default)
+REDIS_URL=redis://localhost:6379
 ```
 
-Basically all you need to do is run the `actionlint` command in your repository. actionlint automatically detects workflows and
-checks errors. actionlint focuses on finding out mistakes. It tries to catch errors as much as possible and make false positives
-as minimal as possible.
+### Running the Bot
 
-```sh
-actionlint
+```bash
+poetry run python src/agentic_crypto_influencer/graphflow/graphflow.py
 ```
 
-Another option to try actionlint is [the online playground][playground]. Your browser can run actionlint through WebAssembly.
+## 🔧 Configuration
 
-See [the usage document][usage] for more details.
+### Agent Behavior
 
-## Documents
+Customize agent behavior through configuration constants:
 
-- [Checks][checks]: Full list of all checks done by actionlint with example inputs, outputs, and playground links.
-- [Installation][install]: Installation instructions. Prebuilt binaries, a Docker image, building from source, a download script
-  (for CI), supports by several package managers are available.
-- [Usage][usage]: How to use `actionlint` command locally or on GitHub Actions, the online playground, an official Docker image,
-  and integrations with reviewdog, Problem Matchers, super-linter, pre-commit, VS Code.
-- [Configuration][config]: How to configure actionlint behavior. Currently, the labels of self-hosted runners, the configuration
-  variables, and ignore patterns of errors for each file paths can be set.
-- [Go API][api]: How to use actionlint as Go library.
-- [References][refs]: Links to resources.
+- `config/search_agent_constants.py` - News search priorities
+- `config/summary_agent_constants.py` - Content creation guidelines
+- `config/publish_agent_constants.py` - Publishing parameters
 
-## Bug reporting
+### Model Configuration
 
-When you see some bugs or false positives, it is helpful to [file a new issue][issue-form] with a minimal example
-of input. Giving me some feedbacks like feature requests or ideas of additional checks is also welcome.
+The system uses Google's Gemini models by default. Configure in:
 
-See the [contribution guide](./CONTRIBUTING.md) for more details.
+- `config/model_constants.py`
 
-## License
+## 🧪 Testing
 
-actionlint is distributed under [the MIT license](./LICENSE.txt).
+Comprehensive test suite with 86+ tests:
 
-[ci-badge]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml/badge.svg
-[ci]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml
-[apidoc-badge]: https://pkg.go.dev/badge/github.com/rhysd/actionlint.svg
-[apidoc]: https://pkg.go.dev/github.com/rhysd/actionlint
-[repo]: https://github.com/rhysd/actionlint
-[playground]: https://rhysd.github.io/actionlint/
-[shellcheck]: https://github.com/koalaman/shellcheck
-[pyflakes]: https://github.com/PyCQA/pyflakes
-[syntax-doc]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-[filter-pattern-doc]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
-[script-injection-doc]: https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-[releases]: https://github.com/rhysd/actionlint/releases
-[checks]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/checks.md
-[install]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/install.md
-[usage]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/usage.md
-[config]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/config.md
-[api]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/api.md
-[refs]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/reference.md
-[issue-form]: https://github.com/rhysd/actionlint/issues/new
+```bash
+# Run all tests
+poetry run pytest
+
+# Run specific test categories
+poetry run pytest tests/test_agents.py
+poetry run pytest tests/test_bitvavo_handler.py
+poetry run pytest tests/test_x.py
+```
+
+## 📊 CI/CD
+
+Automated GitHub Actions workflow:
+
+- ✅ **Code Quality**: Ruff, MyPy, Bandit security scanning
+- ✅ **Testing**: Full test suite with coverage
+- ✅ **Validation**: Workflow validation with shellcheck
+
+## 🔒 Security & Error Management
+
+### Robust Error Handling
+
+- Centralized error management system
+- Comprehensive logging with structured output
+- Graceful degradation for API failures
+
+### Security Features
+
+- Secure credential management
+- Rate limiting and API quota monitoring
+- Input validation and content safety checks
+
+## 📦 Deployment
+
+### Docker Support
+
+```bash
+# Build image
+docker build -t agentic-crypto-influencer .
+
+# Run container
+docker run -d --env-file .env agentic-crypto-influencer
+```
+
+### Local Production Setup
+
+```bash
+# Install production dependencies
+pip install -r requirements.txt
+
+# Set production environment variables
+export ENVIRONMENT=production
+
+# Run with gunicorn (for web components)
+gunicorn --bind 0.0.0.0:8000 wsgi:app
+```
+
+## 🔄 State Management
+
+The system uses Redis for:
+
+- **Workflow State**: Persistent agent conversation history
+- **Rate Limiting**: API call tracking
+- **Caching**: Frequently accessed data
+
+## 📈 Monitoring & Analytics
+
+### Structured Logging
+
+- JSON-formatted logs for easy parsing
+- Performance metrics tracking
+- Error tracking and alerting
+
+### Metrics Available
+
+- Post engagement rates
+- API response times
+- Agent decision accuracy
+- Content generation success rates
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes with tests: `poetry run pytest`
+4. Ensure code quality: `poetry run ruff check && poetry run mypy .`
+5. Commit changes: `git commit -m 'Add amazing feature'`
+6. Push to branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
+
+## 📋 Development Workflow
+
+```bash
+# Install pre-commit hooks
+poetry run pre-commit install
+
+# Run code quality checks
+poetry run ruff check --fix
+poetry run ruff format
+poetry run mypy .
+poetry run bandit -r src/
+
+# Run tests with coverage
+poetry run pytest --cov=src/
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**API Key Errors**
+
+```bash
+# Verify environment variables
+poetry run python -c "from src.agentic_crypto_influencer.config.key_constants import *; print('Keys loaded')"
+```
+
+**Redis Connection Issues**
+
+```bash
+# Check Redis connection
+redis-cli ping
+```
+
+**OAuth Flow Problems**
+
+```bash
+# Start callback server
+poetry run python src/agentic_crypto_influencer/tools/infrastructure/callback_server.py
+```
+
+## 📚 Documentation
+
+- **API Reference**: Auto-generated docs in `/docs`
+- **Architecture Guide**: See `ARCHITECTURE.md`
+- **Deployment Guide**: See `DEPLOYMENT.md`
+
+## 🛣️ Roadmap
+
+- [ ] **Multi-platform expansion**: Instagram, LinkedIn, TikTok
+- [ ] **Advanced analytics**: Sentiment analysis, engagement prediction
+- [ ] **Custom model training**: Fine-tuned models for crypto content
+- [ ] **Community features**: User interaction and response handling
+- [ ] **Portfolio integration**: DeFi protocol monitoring
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Sjef Jenniskens**
+
+- GitHub: [@sjefsharp](https://github.com/sjefsharp)
+- Email: 14937399+sjefsharp@users.noreply.github.com
+
+## 🙏 Acknowledgments
+
+- **Microsoft AutoGen**: Multi-agent framework
+- **Google Gemini**: AI model capabilities
+- **Bitvavo**: Crypto exchange API
+- **X (Twitter)**: Social media platform APIs
+
+---
+
+⭐ **Star this repo** if you find it useful!
+
+🔄 **Follow for updates** on autonomous AI agent development
