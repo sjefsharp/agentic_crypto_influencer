@@ -24,6 +24,7 @@ def test_post_length() -> None:
         mock_trends.return_value = Mock()
 
         x = X()
+        # The post method should now trigger lazy initialization and then fail validation
         with pytest.raises(ValueError, match="Post must be between 1 and 280 characters"):
             x.post("a" * 281)
 
@@ -31,82 +32,73 @@ def test_post_length() -> None:
 class TestXComprehensive:
     def setup_method(self) -> None:
         """Set up test fixtures"""
-        # Mock all the dependencies
-        with (
-            patch("src.agentic_crypto_influencer.tools.x.RedisHandler") as mock_redis_class,
-            patch("src.agentic_crypto_influencer.tools.x.OAuthHandler") as mock_oauth_class,
-            patch("src.agentic_crypto_influencer.tools.x.PostHandler") as mock_post_class,
-            patch("src.agentic_crypto_influencer.tools.x.TrendsHandler") as mock_trends_class,
-        ):
-            # Set up mock instances
-            mock_redis = Mock()
-            mock_redis.redis_client = Mock()
-            mock_redis_class.return_value = mock_redis
+        # Store patches for use in tests - initialization is now lazy
+        self.redis_patch = patch("src.agentic_crypto_influencer.tools.x.RedisHandler")
+        self.oauth_patch = patch("src.agentic_crypto_influencer.tools.x.OAuthHandler")
+        self.post_patch = patch("src.agentic_crypto_influencer.tools.x.PostHandler")
+        self.trends_patch = patch("src.agentic_crypto_influencer.tools.x.TrendsHandler")
 
-            mock_oauth = Mock()
-            mock_oauth.refresh_access_token.return_value = {"access_token": "test_token"}
-            mock_oauth_class.return_value = mock_oauth
+        # Start the patches
+        self.mock_redis_class = self.redis_patch.start()
+        self.mock_oauth_class = self.oauth_patch.start()
+        self.mock_post_class = self.post_patch.start()
+        self.mock_trends_class = self.trends_patch.start()
 
-            mock_post = Mock()
-            mock_post_class.return_value = mock_post
+        # Set up mock instances
+        self.mock_redis = Mock()
+        self.mock_redis.redis_client = Mock()
+        self.mock_redis_class.return_value = self.mock_redis
 
-            mock_trends = Mock()
-            mock_trends_class.return_value = mock_trends
+        self.mock_oauth = Mock()
+        self.mock_oauth.refresh_access_token.return_value = {"access_token": "test_token"}
+        self.mock_oauth_class.return_value = self.mock_oauth
 
-            self.x = X()
+        self.mock_post = Mock()
+        self.mock_post_class.return_value = self.mock_post
 
-            # Store mocks for use in tests
-            self.mock_redis = mock_redis
-            self.mock_oauth = mock_oauth
-            self.mock_post = mock_post
-            self.mock_trends = mock_trends
+        self.mock_trends = Mock()
+        self.mock_trends_class.return_value = self.mock_trends
+
+        # Create X instance - no immediate token refresh
+        self.x = X()
+
+    def teardown_method(self) -> None:
+        """Clean up patches"""
+        self.redis_patch.stop()
+        self.oauth_patch.stop()
+        self.post_patch.stop()
+        self.trends_patch.stop()
 
     def test_init_success(self) -> None:
-        """Test successful initialization"""
-        with (
-            patch("src.agentic_crypto_influencer.tools.x.RedisHandler") as mock_redis_class,
-            patch("src.agentic_crypto_influencer.tools.x.OAuthHandler") as mock_oauth_class,
-            patch("src.agentic_crypto_influencer.tools.x.PostHandler") as mock_post_class,
-            patch("src.agentic_crypto_influencer.tools.x.TrendsHandler") as mock_trends_class,
-        ):
-            # Set up mock instances
-            mock_redis = Mock()
-            mock_redis.redis_client = Mock()
-            mock_redis_class.return_value = mock_redis
+        """Test successful initialization - tokens are now initialized lazily"""
+        # Verify initial state - no immediate token refresh
+        assert self.x.redis_client == self.mock_redis.redis_client
+        assert self.x.access_token is None  # Lazy initialization
+        assert self.x.post_handler is None  # Lazy initialization
+        assert self.x.trends_handler is None  # Lazy initialization
 
-            mock_oauth = Mock()
-            mock_oauth.refresh_access_token.return_value = {"access_token": "test_token"}
-            mock_oauth_class.return_value = mock_oauth
+        # Verify that calling post triggers lazy initialization
+        self.mock_post.return_value.post_message.return_value = {"data": {"id": "123"}}
+        self.x.post("Test message")
 
-            mock_post = Mock()
-            mock_post_class.return_value = mock_post
-
-            mock_trends = Mock()
-            mock_trends_class.return_value = mock_trends
-
-            x = X()
-
-            # Verify initialization
-            assert x.redis_client == mock_redis.redis_client
-            assert x.access_token == {"access_token": "test_token"}
+        # Verify token was initialized
+        self.mock_oauth.refresh_access_token.assert_called_once()
+        assert self.x.access_token == {"access_token": "test_token"}
+        assert self.x.post_handler is not None
+        assert self.x.trends_handler is not None
 
     def test_init_missing_access_token(self) -> None:
-        """Test initialization with missing access token"""
-        with (
-            patch("src.agentic_crypto_influencer.tools.x.RedisHandler") as mock_redis_class,
-            patch("src.agentic_crypto_influencer.tools.x.OAuthHandler") as mock_oauth_class,
-        ):
-            mock_redis = Mock()
-            mock_redis.redis_client = Mock()
-            mock_redis_class.return_value = mock_redis
+        """Test initialization with missing access token - error occurs during lazy init"""
+        # Create instance normally (no immediate token refresh)
+        x = X()
 
-            mock_oauth = Mock()
-            mock_oauth.refresh_access_token.return_value = {"access_token": ""}  # Empty token
-            mock_oauth_class.return_value = mock_oauth
+        # Configure mock to return empty access token
+        self.mock_oauth.refresh_access_token.return_value = {"access_token": ""}
 
-            with pytest.raises(RuntimeError) as exc_info:
-                X()
-            assert "Access token is missing or invalid" in str(exc_info.value)
+        # Error should occur when trying to use post method (lazy initialization)
+        with pytest.raises(RuntimeError) as exc_info:
+            x.post("Test message")
+        assert "Access token is missing or invalid" in str(exc_info.value)
 
     def test_post_success(self) -> None:
         """Test successful post"""

@@ -68,14 +68,33 @@ class X(LoggerMixin):
         self.redis_client: Any | None = RedisHandler(lazy_connect=True).redis_client
 
         self.oauth_handler = OAuthHandler()
-        self.access_token = self.oauth_handler.refresh_access_token()
-        access_token_str = self.access_token.get("access_token", "")
-        if not access_token_str:
-            raise RuntimeError("Access token is missing or invalid.")
-        self.post_handler = PostHandler(access_token_str)
-        self.trends_handler = TrendsHandler(access_token_str)
+
+        # Don't immediately refresh token during init - do it lazily when needed
+        self.access_token: dict[str, Any] | None = None
+        self.post_handler: Any | None = (
+            None  # PostHandler | None but can't type due to conditional import
+        )
+        self.trends_handler: Any | None = (
+            None  # TrendsHandler | None but can't type due to conditional import
+        )
 
         logging.basicConfig(level=logging.INFO)
+
+    def _ensure_token_initialized(self) -> None:
+        """Lazily initialize the access token and handlers if not already done."""
+        if self.access_token is None:
+            try:
+                if PostHandler is None or TrendsHandler is None:
+                    raise RuntimeError("Required X API dependencies not available")
+
+                self.access_token = self.oauth_handler.refresh_access_token()
+                access_token_str = self.access_token.get("access_token", "")
+                if not access_token_str:
+                    raise RuntimeError("Access token is missing or invalid.")
+                self.post_handler = PostHandler(access_token_str)
+                self.trends_handler = TrendsHandler(access_token_str)
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize X authentication: {e}") from e
 
     def post(self, post: str) -> dict[str, Any]:
         """
@@ -92,7 +111,10 @@ class X(LoggerMixin):
             RuntimeError: If posting fails.
             Exception: If the API returns a non-201 status code.
         """
-        return self.post_handler.post_message(post)
+        self._ensure_token_initialized()
+        if self.post_handler is None:  # Safe check instead of assert
+            raise RuntimeError("Failed to initialize post handler")
+        return self.post_handler.post_message(post)  # type: ignore[no-untyped-call,no-any-return]
 
     def get_personalized_trends(
         self, user_id: str, max_results: int = 10, exclude: list[str] | None = None
@@ -112,7 +134,10 @@ class X(LoggerMixin):
             RuntimeError: For network/refresh errors.
             Exception: For non-200 responses.
         """
-        return self.trends_handler.get_personalized_trends(user_id, max_results, exclude)
+        self._ensure_token_initialized()
+        if self.trends_handler is None:  # Safe check instead of assert
+            raise RuntimeError("Failed to initialize trends handler")
+        return self.trends_handler.get_personalized_trends(user_id, max_results, exclude)  # type: ignore[no-untyped-call,no-any-return]
 
 
 def main() -> None:
