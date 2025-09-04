@@ -97,16 +97,7 @@ jobs:
         run: |
           if [ -f coverage.xml ]; then
             # Extract coverage percentage from the XML file
-            COVERAGE=$(python -c "
-            import xml.etree.ElementTree as ET
-            try:
-                tree = ET.parse('coverage.xml')
-                root = tree.getroot()
-                line_rate = root.get('line-rate', '0')
-                print(f'{float(line_rate) * 100:.1f}%')
-            except:
-                print('N/A')
-            ")
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); line_rate = root.get('line-rate', '0'); print(f'{float(line_rate) * 100:.1f}%')" 2>/dev/null || echo "N/A")
           else
             COVERAGE="N/A"
           fi
