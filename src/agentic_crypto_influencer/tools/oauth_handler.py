@@ -17,6 +17,23 @@ from src.agentic_crypto_influencer.config.key_constants import (
     X_TOKEN_ENDPOINT,
     X_URL,
 )
+from src.agentic_crypto_influencer.config.oauth_constants import (
+    ERROR_CODE_VERIFIER_NOT_FOUND,
+    OAUTH_CODE_CHALLENGE_METHOD,
+    OAUTH_DEFAULT_SCOPES,
+    OAUTH_REDIRECT_URI_LOCAL,
+    SUCCESS_PLEASE_AUTHORIZE,
+    SUCCESS_TOKENS_SAVED,
+    SUCCESS_URL_GENERATED,
+    X_AUTHORIZE_URL,
+)
+from src.agentic_crypto_influencer.config.redis_constants import (
+    OAUTH_CODE_VERIFIER_EXPIRY,
+    OAUTH_STATE_EXPIRY,
+    REDIS_KEY_OAUTH_CODE_VERIFIER,
+    REDIS_KEY_OAUTH_STATE,
+    REDIS_KEY_TOKEN,
+)
 from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 
 
@@ -50,37 +67,39 @@ class OAuthHandler:
         code_challenge = generate_code_challenge(code_verifier)
 
         # Store code_verifier for later use in token exchange (consistent naming)
-        self.redis_handler.set("oauth_code_verifier", code_verifier, ex=600)  # Expires in 10 min
+        self.redis_handler.set(
+            REDIS_KEY_OAUTH_CODE_VERIFIER, code_verifier, ex=OAUTH_CODE_VERIFIER_EXPIRY
+        )  # Expires in 10 min
 
         # OAuth2 configuration
         client_id = os.getenv("X_CLIENT_ID")
-        redirect_uri = "http://localhost:5000/callback"
+        redirect_uri = OAUTH_REDIRECT_URI_LOCAL
 
         # Create OAuth2 session with X API v2 scopes
         oauth = OAuth2Session(
             client_id=client_id,
             redirect_uri=redirect_uri,
-            scope=["tweet.read", "tweet.write", "users.read", "offline.access"],
+            scope=OAUTH_DEFAULT_SCOPES,
         )
 
         # Generate authorization URL with PKCE parameters (S256 method as per X API v2 docs)
         authorization_url, state = oauth.authorization_url(  # type: ignore[no-untyped-call]
-            "https://x.com/i/oauth2/authorize",
+            X_AUTHORIZE_URL,
             code_challenge=code_challenge,
-            code_challenge_method="S256",
+            code_challenge_method=OAUTH_CODE_CHALLENGE_METHOD,
         )
 
         # Store state for CSRF protection (consistent naming)
-        self.redis_handler.set("oauth_state", state, ex=600)
+        self.redis_handler.set(REDIS_KEY_OAUTH_STATE, state, ex=OAUTH_STATE_EXPIRY)
 
-        print("Authorization URL generated with PKCE S256 method")
-        print(f"Please go to {authorization_url} and authorize the application.")
+        print(SUCCESS_URL_GENERATED)
+        print(SUCCESS_PLEASE_AUTHORIZE % authorization_url)
         return authorization_url
 
     def exchange_code_for_tokens(self, code: str) -> dict[str, Any]:
-        code_verifier = self.redis_handler.get("oauth_code_verifier")
+        code_verifier = self.redis_handler.get(REDIS_KEY_OAUTH_CODE_VERIFIER)
         if not code_verifier:
-            raise RuntimeError("Code verifier not found in Redis")
+            raise RuntimeError(ERROR_CODE_VERIFIER_NOT_FOUND)
 
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
@@ -93,8 +112,8 @@ class OAuthHandler:
             else code_verifier,
             code=code,
         )
-        self.redis_handler.set("token", json.dumps(token))
-        logging.info("Tokens successfully saved to Redis.")
+        self.redis_handler.set(REDIS_KEY_TOKEN, json.dumps(token))
+        logging.info(SUCCESS_TOKENS_SAVED)
         return dict(token)
 
     def refresh_access_token(self) -> dict[str, Any]:

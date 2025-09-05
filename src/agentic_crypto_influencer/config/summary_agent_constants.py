@@ -1,4 +1,6 @@
-SUMMARY_AGENT_NAME = "SummaryAgent"
+from src.agentic_crypto_influencer.config.app_constants import AGENT_NAME_SUMMARY
+
+SUMMARY_AGENT_NAME = AGENT_NAME_SUMMARY
 SUMMARY_AGENT_SYSTEM_MESSAGE = """
 You are a Crypto Content Creator. Transform raw news facts into tweet-ready 
 content under 280 chars.

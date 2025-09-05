@@ -133,7 +133,7 @@ class TestFrontendServer:
 
             response = client.get("/callback?code=test_code&state=test_state")
             assert response.status_code == 200
-            assert b"Autorisatie Succesvol" in response.data
+            assert b"Autorisatie Voltooid!" in response.data
             assert b"<script>" in response.data  # Auto-close script
 
     def test_callback_error(self, client: Any) -> None:

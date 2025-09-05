@@ -1,5 +1,7 @@
 # SearchAgent
-SEARCH_AGENT_NAME = "SearchAgent"
+from src.agentic_crypto_influencer.config.app_constants import AGENT_NAME_SEARCH
+
+SEARCH_AGENT_NAME = AGENT_NAME_SEARCH
 SEARCH_AGENT_SYSTEM_MESSAGE = """
 You are a Crypto News Hunter. Find the most significant crypto/Web3 news from the last 24 hours.
 

@@ -12,14 +12,29 @@ from functools import wraps
 import time
 from typing import Any, TypeVar
 
+from src.agentic_crypto_influencer.config.app_constants import (
+    COMPONENT_CIRCUIT_BREAKER,
+    COMPONENT_RETRY,
+)
+from src.agentic_crypto_influencer.config.error_constants import (
+    CIRCUIT_BREAKER_CLOSED_RECOVERY,
+    CIRCUIT_BREAKER_HALF_OPEN,
+    CIRCUIT_BREAKER_IS_OPEN,
+    CIRCUIT_BREAKER_OPENED_FAILURES,
+    CIRCUIT_BREAKER_REOPENED_FAILURE,
+    RETRY_ATTEMPT_MESSAGE,
+    RETRY_ATTEMPTS_EXHAUSTED,
+    RETRY_NON_RETRYABLE,
+)
 from src.agentic_crypto_influencer.config.logging_config import get_logger
 from src.agentic_crypto_influencer.error_management.exceptions import (
     APIConnectionError,
+    APIError,
     get_retry_delay,
     is_retryable_error,
 )
 
-logger = get_logger("error_management.retry")
+logger = get_logger(f"{COMPONENT_RETRY}.{COMPONENT_RETRY}")
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -66,7 +81,7 @@ class CircuitBreaker:
         self.last_failure_time: float | None = None
         self.state = CircuitState.CLOSED
 
-        self.logger = get_logger(f"circuit_breaker.{service_name}")
+        self.logger = get_logger(f"{COMPONENT_CIRCUIT_BREAKER}.{service_name}")
 
     def _should_attempt_reset(self) -> bool:
         """Check if circuit should attempt to reset."""

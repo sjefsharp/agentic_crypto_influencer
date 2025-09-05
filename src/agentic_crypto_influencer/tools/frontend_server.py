@@ -24,6 +24,29 @@ project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from src.agentic_crypto_influencer.config.frontend_constants import (  # noqa: E402
+    ACTIVITY_STATUS_ERROR,
+    ACTIVITY_STATUS_SUCCESS,
+    ACTIVITY_TYPE_OAUTH,
+    FLASK_SECRET_KEY_DEFAULT,
+    FLASK_STATIC_FOLDER,
+    FLASK_TEMPLATE_FOLDER,
+    HOST_LOCAL,
+    HOST_PRODUCTION,
+    LOG_SOCKETIO_FALLBACK,
+    LOG_SOCKETIO_INITIALIZED,
+    MAX_RECENT_ACTIVITIES,
+    OAUTH_CALLBACK_ERROR_PREFIX,
+    OAUTH_FAILED_MESSAGE,
+    OAUTH_NO_CODE_MESSAGE,
+    OAUTH_SUCCESS_HTML,
+    OAUTH_SUCCESS_MESSAGE,
+    PORT_ENV_VAR,
+    ROUTE_OAUTH_STATUS,
+    SOCKETIO_ASYNC_MODE,
+    SOCKETIO_CORS_ALLOWED_ORIGINS,
+    TEMPLATE_DASHBOARD,
+)
 from src.agentic_crypto_influencer.config.key_constants import (  # noqa: E402
     CALLBACK_SERVER_PORT,
     X_CLIENT_ID,
@@ -31,30 +54,49 @@ from src.agentic_crypto_influencer.config.key_constants import (  # noqa: E402
     X_REDIRECT_URI,
 )
 from src.agentic_crypto_influencer.config.logging_config import get_logger  # noqa: E402
+from src.agentic_crypto_influencer.config.oauth_constants import (  # noqa: E402
+    CONTENT_TYPE_FORM_URLENCODED,
+    HEADER_AUTHORIZATION,
+    HEADER_BASIC_PREFIX,
+    HEADER_CONTENT_TYPE,
+    TOKEN_KEY_ACCESS_TOKEN,
+    TOKEN_KEY_EXPIRES_AT,
+    TOKEN_KEY_TOKEN_TYPE,
+    TOKEN_TYPE_BEARER,
+    X_TOKEN_URL_FALLBACK,
+)
+from src.agentic_crypto_influencer.config.redis_constants import (  # noqa: E402
+    REDIS_KEY_ACCESS_TOKEN,
+    REDIS_KEY_OAUTH_CODE_VERIFIER,
+)
 from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler  # noqa: E402
 
 logger = get_logger(__name__)
 
 # Initialize Flask app with SocketIO for real-time features
-app = Flask(__name__, template_folder="templates", static_folder="static")
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "your-secret-key-here")
+app = Flask(__name__, template_folder=FLASK_TEMPLATE_FOLDER, static_folder=FLASK_STATIC_FOLDER)
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", FLASK_SECRET_KEY_DEFAULT)
 
 # Initialize SocketIO with threading for production compatibility
 socketio_available = True
 try:
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-    logger.info("SocketIO initialized successfully for real-time features")
+    socketio = SocketIO(
+        app, cors_allowed_origins=SOCKETIO_CORS_ALLOWED_ORIGINS, async_mode=SOCKETIO_ASYNC_MODE
+    )
+    logger.info(LOG_SOCKETIO_INITIALIZED)
 except ImportError:
-    logger.warning("flask-socketio not available - falling back to polling")
+    logger.warning(LOG_SOCKETIO_FALLBACK)
     socketio_available = False
 
 # Smart host/port configuration for Render.com vs local
-PORT = int(os.environ.get("PORT", CALLBACK_SERVER_PORT))  # Render.com provides PORT env var
-HOST = "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"  # Render.com vs local  # nosec B104
+PORT = int(os.environ.get(PORT_ENV_VAR, CALLBACK_SERVER_PORT))  # Render.com provides PORT env var
+HOST = (
+    HOST_PRODUCTION if PORT_ENV_VAR in os.environ else HOST_LOCAL
+)  # Render.com vs local  # nosec B104
 
 # Store recent agent activities for new connections
 recent_activities: list[dict[str, Any]] = []
-MAX_RECENT_ACTIVITIES = 50
+MAX_RECENT_ACTIVITIES_LIMIT = MAX_RECENT_ACTIVITIES
 
 # Global variables for real-time streaming
 connected_clients: set[str] = set()
@@ -65,7 +107,7 @@ redis_handler = RedisHandler(lazy_connect=True)
 @app.route("/")  # type: ignore
 def dashboard() -> str:
     """Main dashboard with OAuth status and live agent stream."""
-    return render_template("dashboard.html")  # type: ignore
+    return render_template(TEMPLATE_DASHBOARD)  # type: ignore
 
 
 @app.route("/static/<path:filename>")  # type: ignore
@@ -74,22 +116,24 @@ def static_files(filename: str) -> Response:
     return send_from_directory(app.static_folder, filename)
 
 
-@app.route("/api/oauth/status")  # type: ignore
+@app.route(ROUTE_OAUTH_STATUS)  # type: ignore
 def oauth_status() -> tuple[dict[str, Any], int] | dict[str, Any]:
     """Check current OAuth authorization status."""
     try:
-        token_data = redis_handler.get("access_token")
+        token_data = redis_handler.get(REDIS_KEY_ACCESS_TOKEN)
         if token_data:
             # Try to parse token data
             try:
                 token_info = json.loads(token_data) if isinstance(token_data, str) else token_data
                 # Check if token exists and has required fields
-                if isinstance(token_info, dict) and "access_token" in token_info:
+                if isinstance(token_info, dict) and TOKEN_KEY_ACCESS_TOKEN in token_info:
                     return jsonify(  # type: ignore
                         {
                             "authorized": True,
-                            "token_type": token_info.get("token_type", "bearer"),
-                            "expires_at": token_info.get("expires_at"),
+                            TOKEN_KEY_TOKEN_TYPE: token_info.get(
+                                TOKEN_KEY_TOKEN_TYPE, TOKEN_TYPE_BEARER
+                            ),
+                            TOKEN_KEY_EXPIRES_AT: token_info.get(TOKEN_KEY_EXPIRES_AT),
                             "timestamp": datetime.now().isoformat(),
                         }
                     )
@@ -186,30 +230,15 @@ def callback() -> tuple[str, int] | str:
 
         if not code:
             logger.error("No authorization code received in callback")
-            return "❌ Geen autorisatiecode ontvangen", 400
+            return OAUTH_NO_CODE_MESSAGE, 400
 
         # Exchange code for tokens
         success = get_and_save_tokens(code)
 
         if success:
             # Broadcast success to connected clients
-            broadcast_activity("OAuth", "✅ Autorisatie succesvol voltooid", "success")
-            return """
-            <html><body style="font-family: -apple-system, BlinkMacSystemFont,
-                             'Segoe UI', sans-serif; text-align: center; 
-                             padding: 50px; background: #f8f9fa;">
-                <h1 style="color: #28a745;">✅ Autorisatie Succesvol!</h1>
-                <p>Je kunt dit venster nu sluiten en teruggaan naar het dashboard.</p>
-                <script>
-                    setTimeout(() => {
-                        if (window.opener) {
-                            window.opener.postMessage('oauth_success', '*');
-                        }
-                        window.close();
-                    }, 2000);
-                </script>
-            </body></html>
-            """
+            broadcast_activity(ACTIVITY_TYPE_OAUTH, OAUTH_SUCCESS_MESSAGE, ACTIVITY_STATUS_SUCCESS)
+            return OAUTH_SUCCESS_HTML
         else:
             broadcast_activity("OAuth", "❌ Token exchange mislukt", "error")
             return "❌ Token uitwisseling mislukt", 500
@@ -227,21 +256,21 @@ def get_and_save_tokens(code: str) -> bool:
     """
     try:
         # Get stored OAuth parameters
-        stored_code_verifier = redis_handler.get("oauth_code_verifier")
+        stored_code_verifier = redis_handler.get(REDIS_KEY_OAUTH_CODE_VERIFIER)
         if not stored_code_verifier:
             logger.error("No code_verifier found in Redis")
             return False
 
         # Prepare token exchange request
-        token_url = "https://api.twitter.com/2/oauth2/token"  # nosec B105
+        token_url = X_TOKEN_URL_FALLBACK  # nosec B105
 
         # Create Basic auth header for confidential clients
         credentials = f"{X_CLIENT_ID}:{X_CLIENT_SECRET}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
         headers = {
-            "Authorization": f"Basic {encoded_credentials}",
-            "Content-Type": "application/x-www-form-urlencoded",
+            HEADER_AUTHORIZATION: f"{HEADER_BASIC_PREFIX} {encoded_credentials}",
+            HEADER_CONTENT_TYPE: CONTENT_TYPE_FORM_URLENCODED,
         }
 
         token_data = {

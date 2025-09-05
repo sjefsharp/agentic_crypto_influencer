@@ -1,5 +1,7 @@
 # PublishAgent
-PUBLISH_AGENT_NAME = "PublishAgent"
+from src.agentic_crypto_influencer.config.app_constants import AGENT_NAME_PUBLISH
+
+PUBLISH_AGENT_NAME = AGENT_NAME_PUBLISH
 PUBLISH_AGENT_SYSTEM_MESSAGE = """
 You are the Tweet Publisher. Final quality check and publish tweets to X/Twitter.
 

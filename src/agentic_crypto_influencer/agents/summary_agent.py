@@ -6,7 +6,7 @@ from src.agentic_crypto_influencer.config.summary_agent_constants import (
     SUMMARY_AGENT_SYSTEM_MESSAGE,
 )
 from src.agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler
-from src.agentic_crypto_influencer.tools.validator import Validator
+from src.agentic_crypto_influencer.tools.validator import LengthValidator
 
 
 class SummaryAgent(AssistantAgent):  # type: ignore[misc]
@@ -15,5 +15,5 @@ class SummaryAgent(AssistantAgent):  # type: ignore[misc]
             name=SUMMARY_AGENT_NAME,
             model_client=model_client,
             system_message=SUMMARY_AGENT_SYSTEM_MESSAGE,
-            tools=[Validator.validate_length, BitvavoHandler().get_market_data],
+            tools=[LengthValidator.validate_length, BitvavoHandler().get_market_data],
         )
