@@ -4,10 +4,10 @@ Prevents hardcoded strings in Redis operations.
 """
 
 # OAuth Related Keys
-REDIS_KEY_ACCESS_TOKEN = "access_token"
+REDIS_KEY_ACCESS_TOKEN = "access_token"  # nosec B105
 REDIS_KEY_OAUTH_CODE_VERIFIER = "oauth_code_verifier"
 REDIS_KEY_OAUTH_STATE = "oauth_state"
-REDIS_KEY_TOKEN = "token"
+REDIS_KEY_TOKEN = "token"  # nosec B105
 
 # Token Expiration Times (in seconds)
 OAUTH_CODE_VERIFIER_EXPIRY = 600  # 10 minutes

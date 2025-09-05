@@ -4,7 +4,7 @@ Contains all hardcoded strings used in the frontend server.
 """
 
 # Flask Configuration
-FLASK_SECRET_KEY_DEFAULT = "your-secret-key-here"
+FLASK_SECRET_KEY_DEFAULT = "your-secret-key-here"  # nosec B105
 FLASK_TEMPLATE_FOLDER = "templates"
 FLASK_STATIC_FOLDER = "static"
 
@@ -13,7 +13,7 @@ SOCKETIO_CORS_ALLOWED_ORIGINS = "*"
 SOCKETIO_ASYNC_MODE = "threading"
 
 # Host Configuration
-HOST_PRODUCTION = "0.0.0.0"
+HOST_PRODUCTION = "0.0.0.0"  # nosec B104
 HOST_LOCAL = "127.0.0.1"
 PORT_ENV_VAR = "PORT"
 

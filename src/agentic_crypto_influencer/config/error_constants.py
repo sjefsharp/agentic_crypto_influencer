@@ -37,7 +37,7 @@ ERROR_INVALID_DATA_FORMAT = "Invalid data format"
 ERROR_MISSING_REQUIRED_FIELD = "Missing required field: %s"
 
 # X API Specific Error Messages
-ERROR_X_TOKEN_INVALID = "Invalid or expired X API token"
+ERROR_X_TOKEN_INVALID = "Invalid or expired X API token"  # nosec B105
 ERROR_X_POST_FAILED = "Failed to post to X API"
 ERROR_X_AUTH_FAILED = "X API authentication failed"
 

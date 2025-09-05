@@ -16,20 +16,12 @@ from src.agentic_crypto_influencer.config.app_constants import (
     COMPONENT_CIRCUIT_BREAKER,
     COMPONENT_RETRY,
 )
-from src.agentic_crypto_influencer.config.error_constants import (
-    CIRCUIT_BREAKER_CLOSED_RECOVERY,
-    CIRCUIT_BREAKER_HALF_OPEN,
-    CIRCUIT_BREAKER_IS_OPEN,
-    CIRCUIT_BREAKER_OPENED_FAILURES,
-    CIRCUIT_BREAKER_REOPENED_FAILURE,
-    RETRY_ATTEMPT_MESSAGE,
-    RETRY_ATTEMPTS_EXHAUSTED,
-    RETRY_NON_RETRYABLE,
-)
+from src.agentic_crypto_influencer.config.error_constants import ERROR_VALIDATION_GENERAL
 from src.agentic_crypto_influencer.config.logging_config import get_logger
 from src.agentic_crypto_influencer.error_management.exceptions import (
     APIConnectionError,
-    APIError,
+    RateLimitError,
+    RetryableError,
     get_retry_delay,
     is_retryable_error,
 )

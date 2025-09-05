@@ -1,5 +1,4 @@
 # mypy: disable-error-code="misc"
-# type: ignore[misc]
 
 import json
 from typing import override

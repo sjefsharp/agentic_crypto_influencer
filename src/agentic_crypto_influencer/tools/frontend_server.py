@@ -25,7 +25,6 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.agentic_crypto_influencer.config.frontend_constants import (  # noqa: E402
-    ACTIVITY_STATUS_ERROR,
     ACTIVITY_STATUS_SUCCESS,
     ACTIVITY_TYPE_OAUTH,
     FLASK_SECRET_KEY_DEFAULT,
@@ -36,8 +35,6 @@ from src.agentic_crypto_influencer.config.frontend_constants import (  # noqa: E
     LOG_SOCKETIO_FALLBACK,
     LOG_SOCKETIO_INITIALIZED,
     MAX_RECENT_ACTIVITIES,
-    OAUTH_CALLBACK_ERROR_PREFIX,
-    OAUTH_FAILED_MESSAGE,
     OAUTH_NO_CODE_MESSAGE,
     OAUTH_SUCCESS_HTML,
     OAUTH_SUCCESS_MESSAGE,

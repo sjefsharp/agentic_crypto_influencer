@@ -164,7 +164,7 @@ class TestFrontendServer:
 
     def test_recent_activities_limit(self) -> None:
         """Test that recent activities are limited to MAX_RECENT_ACTIVITIES."""
-        from src.agentic_crypto_influencer.tools.frontend_server import MAX_RECENT_ACTIVITIES
+        from src.agentic_crypto_influencer.config.frontend_constants import MAX_RECENT_ACTIVITIES
 
         # Clear and fill beyond limit
         recent_activities.clear()
