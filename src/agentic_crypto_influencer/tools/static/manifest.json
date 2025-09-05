@@ -1,0 +1,73 @@
+{
+  "name": "Agentic Crypto Influencer Dashboard",
+  "short_name": "Crypto Bot",
+  "description": "OAuth autorisatie dashboard met live agent output monitoring",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1DA1F2",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "developer"],
+  "lang": "nl",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop dashboard weergave"
+    },
+    {
+      "src": "/static/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobiele dashboard weergave"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "OAuth Autoriseren",
+      "short_name": "Autoriseren",
+      "description": "Start OAuth2 autorisatie flow",
+      "url": "/authorize",
+      "icons": [
+        {
+          "src": "/static/shortcut-auth.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Live Stream",
+      "short_name": "Stream",
+      "description": "Bekijk live agent activiteit",
+      "url": "/stream",
+      "icons": [
+        {
+          "src": "/static/shortcut-stream.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}

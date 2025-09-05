@@ -375,18 +375,6 @@ class TestGraphflowMain:
             asyncio.run(main())
 
             # Verify the async for loop executed and logged events
-            # Check that workflow events were logged with correct extra data
-            mock_logger.info.assert_any_call(
-                "Workflow event 1",
-                extra={
-                    "event_number": 1,
-                    "event_preview": "event1",  # First 200 chars of "event1"
-                },
-            )
-            mock_logger.info.assert_any_call(
-                "Workflow event 2",
-                extra={
-                    "event_number": 2,
-                    "event_preview": "event2",  # First 200 chars of "event2"
-                },
-            )
+            # Check that workflow events were logged correctly
+            mock_logger.info.assert_any_call("Workflow event 1 - Type: str")
+            mock_logger.info.assert_any_call("Workflow event 2 - Type: str")

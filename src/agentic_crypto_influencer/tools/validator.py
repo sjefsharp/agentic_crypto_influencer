@@ -1,4 +1,4 @@
-class Validator:
+class LengthValidator:
     @staticmethod
     def validate_length(value: str, min_length: int = 1, max_length: int = 280) -> bool:
         """

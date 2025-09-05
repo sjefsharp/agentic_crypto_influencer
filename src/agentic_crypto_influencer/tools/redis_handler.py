@@ -47,3 +47,23 @@ class RedisHandler:
         except Exception as e:
             logging.error("Failed to set key '%s' in Redis: %s", key, str(e))
             raise RuntimeError(f"Error setting key '{key}' in Redis: {e!s}") from e
+
+    def delete(self, key: str) -> bool:
+        """Delete a key from Redis."""
+        self._ensure_connected()
+        try:
+            result = self.redis_client.delete(key)  # type: ignore
+            return bool(result)
+        except Exception as e:
+            logging.error("Failed to delete key '%s' from Redis: %s", key, str(e))
+            raise RuntimeError(f"Error deleting key '{key}' from Redis: {e!s}") from e
+
+    def ping(self) -> bool:
+        """Test Redis connection with ping."""
+        self._ensure_connected()
+        try:
+            result = self.redis_client.ping()  # type: ignore
+            return bool(result)
+        except Exception as e:
+            logging.error("Redis ping failed: %s", str(e))
+            raise RuntimeError(f"Redis ping failed: {e!s}") from e

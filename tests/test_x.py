@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -19,7 +20,11 @@ def test_post_length() -> None:
         )
         mock_post.return_value = mock_post_instance
 
-        mock_redis.return_value.redis_client = Mock()
+        # Mock Redis to return valid token JSON
+        mock_redis_instance = Mock()
+        mock_redis_instance.get.return_value = '{"access_token": "test_token"}'
+        mock_redis.return_value = mock_redis_instance
+
         mock_oauth.return_value.refresh_access_token.return_value = {"access_token": "test_token"}
         mock_trends.return_value = Mock()
 
@@ -47,6 +52,10 @@ class TestXComprehensive:
         # Set up mock instances
         self.mock_redis = Mock()
         self.mock_redis.redis_client = Mock()
+        # Mock redis get method to return proper JSON string for token
+        self.mock_redis.get.return_value = (
+            '{"access_token": "test_token", "refresh_token": "test_refresh"}'
+        )
         self.mock_redis_class.return_value = self.mock_redis
 
         self.mock_oauth = Mock()
@@ -62,6 +71,9 @@ class TestXComprehensive:
         # Create X instance - no immediate token refresh
         self.x = X()
 
+        # Explicitly set the mocked redis_handler to ensure our mocks are used
+        self.x.redis_handler = self.mock_redis
+
     def teardown_method(self) -> None:
         """Clean up patches"""
         self.redis_patch.stop()
@@ -72,7 +84,7 @@ class TestXComprehensive:
     def test_init_success(self) -> None:
         """Test successful initialization - tokens are now initialized lazily"""
         # Verify initial state - no immediate token refresh
-        assert self.x.redis_client == self.mock_redis.redis_client
+        assert self.x.redis_handler is not None
         assert self.x.access_token is None  # Lazy initialization
         assert self.x.post_handler is None  # Lazy initialization
         assert self.x.trends_handler is None  # Lazy initialization
@@ -82,8 +94,10 @@ class TestXComprehensive:
         self.x.post("Test message")
 
         # Verify token was initialized
-        self.mock_oauth.refresh_access_token.assert_called_once()
-        assert self.x.access_token == {"access_token": "test_token"}
+        assert self.x.access_token == {
+            "access_token": "test_token",
+            "refresh_token": "test_refresh",
+        }
         assert self.x.post_handler is not None
         assert self.x.trends_handler is not None
 
@@ -92,8 +106,8 @@ class TestXComprehensive:
         # Create instance normally (no immediate token refresh)
         x = X()
 
-        # Configure mock to return empty access token
-        self.mock_oauth.refresh_access_token.return_value = {"access_token": ""}
+        # Configure mock to return empty token data from Redis
+        self.mock_redis.get.return_value = json.dumps({"access_token": ""})
 
         # Error should occur when trying to use post method (lazy initialization)
         with pytest.raises(RuntimeError) as exc_info:

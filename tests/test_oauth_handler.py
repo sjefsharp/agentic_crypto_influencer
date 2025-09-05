@@ -15,27 +15,20 @@ class TestOAuthHandler:
             assert handler.redis_handler is not None
 
     @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuth2Session")
-    @patch("src.agentic_crypto_influencer.tools.oauth_handler.os.urandom")
-    @patch("src.agentic_crypto_influencer.tools.oauth_handler.hashlib.sha256")
-    @patch("src.agentic_crypto_influencer.tools.oauth_handler.base64.urlsafe_b64encode")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.generate_code_verifier")
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.generate_code_challenge")
     def test_get_authorization_url(
-        self, mock_b64encode: Mock, mock_sha256: Mock, mock_urandom: Mock, mock_oauth_session: Mock
+        self, mock_code_challenge: Mock, mock_code_verifier: Mock, mock_oauth_session: Mock
     ) -> None:
         """Test getting authorization URL"""
         with patch("src.agentic_crypto_influencer.tools.oauth_handler.RedisHandler") as mock_redis:
-            mock_redis.return_value = Mock()
+            mock_redis_instance = Mock()
+            mock_redis.return_value = mock_redis_instance
             handler = OAuthHandler()
 
-        # Mock random bytes
-        mock_urandom.return_value = b"random_bytes_30_chars_long"
-
-        # Mock base64 encoding - need to mock the decode() method
-        mock_b64encode.return_value.decode.return_value = "code_challenge_with_special_chars!@#"
-
-        # Mock SHA256
-        mock_hash = Mock()
-        mock_hash.digest.return_value = b"hash_bytes"
-        mock_sha256.return_value = mock_hash
+        # Mock PKCE functions
+        mock_code_verifier.return_value = "test_code_verifier"
+        mock_code_challenge.return_value = "test_code_challenge"
 
         # Mock OAuth2Session
         mock_oauth = Mock()
@@ -48,14 +41,26 @@ class TestOAuthHandler:
         url = handler.get_authorization_url()
 
         # Verify Redis calls
-        handler.redis_handler.set.assert_any_call("code_verifier", "codechallengewithspecialchars")  # type: ignore[attr-defined]
-        handler.redis_handler.set.assert_any_call("oauth_state", "state123")  # type: ignore[attr-defined]
+        mock_redis_instance.set.assert_any_call(
+            "oauth_code_verifier", "test_code_verifier", ex=600
+        )
+        mock_redis_instance.set.assert_any_call("oauth_state", "state123", ex=600)
 
-        # Verify OAuth session creation
-        mock_oauth_session.assert_called_once()
+        # Verify OAuth session creation - use ANY to match actual client_id from config
+        from unittest.mock import ANY
+
+        mock_oauth_session.assert_called_once_with(
+            client_id=ANY,  # Client ID comes from config, not None
+            redirect_uri="http://localhost:5000/callback",
+            scope=["tweet.read", "tweet.write", "users.read", "offline.access"],
+        )
 
         # Verify authorization URL call
-        mock_oauth.authorization_url.assert_called_once()
+        mock_oauth.authorization_url.assert_called_once_with(
+            "https://x.com/i/oauth2/authorize",
+            code_challenge="test_code_challenge",
+            code_challenge_method="S256",
+        )
 
         # Verify return value
         assert url == "https://example.com/auth"
@@ -85,16 +90,14 @@ class TestOAuthHandler:
         result = handler.exchange_code_for_tokens("auth_code_123")
 
         # Verify Redis calls
-        handler.redis_handler.get.assert_called_once_with("code_verifier")
+        handler.redis_handler.get.assert_called_once_with("oauth_code_verifier")
         handler.redis_handler.set.assert_called_once()
 
         # Verify OAuth session creation and token fetch
         mock_oauth_session.assert_called_once()
         mock_oauth.fetch_token.assert_called_once()
 
-        # Verify logging - should be called twice: Redis connection + success message
-        assert mock_logging_info.call_count == 2
-        mock_logging_info.assert_any_call("Connected to Redis at %s", "redis://localhost:6379")
+        # Verify logging - only check for success message
         mock_logging_info.assert_any_call("Tokens successfully saved to Redis.")
 
         # Verify return value
@@ -156,9 +159,7 @@ class TestOAuthHandler:
         mock_oauth_session.assert_called_once()
         mock_oauth.refresh_token.assert_called_once()
 
-        # Verify logging - should be called twice: Redis connection + success message
-        assert mock_logging_info.call_count == 2
-        mock_logging_info.assert_any_call("Connected to Redis at %s", "redis://localhost:6379")
+        # Verify logging - only check for success message
         mock_logging_info.assert_any_call(
             "Access token successfully refreshed and saved to Redis."
         )

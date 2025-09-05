@@ -65,7 +65,7 @@ class X(LoggerMixin):
             )
 
         # Initialize Redis client (lazy connection)
-        self.redis_client: Any | None = RedisHandler(lazy_connect=True).redis_client
+        self.redis_handler = RedisHandler(lazy_connect=True)
 
         self.oauth_handler = OAuthHandler()
 
@@ -83,18 +83,54 @@ class X(LoggerMixin):
     def _ensure_token_initialized(self) -> None:
         """Lazily initialize the access token and handlers if not already done."""
         if self.access_token is None:
+            self.logger.info("Initializing X API token and handlers...")
             try:
                 if PostHandler is None or TrendsHandler is None:
+                    self.logger.error("Required X API dependencies not available")
                     raise RuntimeError("Required X API dependencies not available")
 
-                self.access_token = self.oauth_handler.refresh_access_token()
-                access_token_str = self.access_token.get("access_token", "")
+                self.logger.info("Getting access token from Redis...")
+                # Get tokens from Redis (stored by OAuth2Session callback)
+                if RedisHandler is None:
+                    self.logger.error("RedisHandler is not available")
+                    raise RuntimeError("RedisHandler is not available")
+
+                import json
+
+                token_data_str = self.redis_handler.get("token")
+
+                if not token_data_str:
+                    self.logger.error(
+                        "No token found in Redis. Please authorize via callback server."
+                    )
+                    raise RuntimeError(
+                        "No token found in Redis. Please authorize via http://localhost:5000"
+                    )
+
+                # Parse token data
+                token_data = json.loads(
+                    token_data_str.decode()
+                    if isinstance(token_data_str, bytes)
+                    else token_data_str
+                )
+                access_token_str = token_data.get("access_token", "")
+
                 if not access_token_str:
+                    self.logger.error("Access token is missing or invalid in Redis data")
                     raise RuntimeError("Access token is missing or invalid.")
+
+                # Store for later use
+                self.access_token = token_data
+
+                self.logger.info("Creating PostHandler and TrendsHandler...")
                 self.post_handler = PostHandler(access_token_str)
                 self.trends_handler = TrendsHandler(access_token_str)
+                self.logger.info("X API initialization completed successfully")
             except Exception as e:
+                self.logger.error(f"Failed to initialize X authentication: {e}")
                 raise RuntimeError(f"Failed to initialize X authentication: {e}") from e
+        else:
+            self.logger.debug("X API token already initialized")
 
     def post(self, post: str) -> dict[str, Any]:
         """
@@ -111,10 +147,20 @@ class X(LoggerMixin):
             RuntimeError: If posting fails.
             Exception: If the API returns a non-201 status code.
         """
-        self._ensure_token_initialized()
-        if self.post_handler is None:  # Safe check instead of assert
-            raise RuntimeError("Failed to initialize post handler")
-        return self.post_handler.post_message(post)  # type: ignore[no-untyped-call,no-any-return]
+        self.logger.info(f"Attempting to post message to X: {post[:50]}...")
+        try:
+            self._ensure_token_initialized()
+            if self.post_handler is None:  # Safe check instead of assert
+                self.logger.error("Post handler is None after initialization")
+                raise RuntimeError("Failed to initialize post handler")
+
+            self.logger.info("Post handler initialized successfully, calling post_message")
+            result: dict[str, Any] = self.post_handler.post_message(post)  # type: ignore[no-untyped-call]
+            self.logger.info(f"Successfully posted to X. Response: {result}")
+            return result
+        except Exception as e:
+            self.logger.error(f"Failed to post to X: {type(e).__name__}: {e}")
+            raise
 
     def get_personalized_trends(
         self, user_id: str, max_results: int = 10, exclude: list[str] | None = None

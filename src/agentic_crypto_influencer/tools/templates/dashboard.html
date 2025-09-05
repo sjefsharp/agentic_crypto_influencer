@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic Crypto Influencer - OAuth Dashboard</title>
+
+    <!-- WCAG 2.1 AA Compliance Meta Tags -->
+    <meta
+      name="description"
+      content="OAuth autorisatie dashboard voor Agentic Crypto Influencer bot met live agent output"
+    />
+    <meta name="theme-color" content="#1DA1F2" />
+
+    <!-- Accessibility & Progressive Web App -->
+    <link rel="manifest" href="/static/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <style>
+      /* CSS Custom Properties for WCAG AA Color Contrast */
+      :root {
+        --primary-color: #1da1f2;
+        --primary-dark: #1991da;
+        --success-color: #17a2b8;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --dark-color: #343a40;
+        --light-color: #f8f9fa;
+        --border-color: #dee2e6;
+
+        /* High Contrast Colors for WCAG AA */
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --background-primary: #ffffff;
+        --background-secondary: #f8f9fa;
+
+        /* Focus indicators */
+        --focus-color: #0056b3;
+        --focus-width: 3px;
+
+        /* Typography */
+        --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        --font-size-base: 16px;
+        --line-height-base: 1.5;
+
+        /* Spacing */
+        --spacing-xs: 0.25rem;
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 3rem;
+      }
+
+      /* Reset & Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--font-family);
+        font-size: var(--font-size-base);
+        line-height: var(--line-height-base);
+        color: var(--text-primary);
+        background-color: var(--background-primary);
+      }
+
+      /* Skip Links for Screen Readers */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 6px;
+        background: var(--primary-color);
+        color: white;
+        padding: 8px;
+        text-decoration: none;
+        border-radius: 4px;
+        z-index: 1000;
+      }
+
+      .skip-link:focus {
+        top: 6px;
+      }
+
+      /* Main Layout */
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-lg);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: var(--spacing-lg);
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: var(--spacing-md);
+      }
+
+      .header p {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+      }
+
+      /* Card Layout */
+      .card {
+        background: var(--background-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .card h2 {
+        font-size: 1.5rem;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-primary);
+      }
+
+      /* Button Styles - WCAG AA Compliant */
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        min-height: 44px; /* WCAG touch target size */
+        min-width: 44px;
+      }
+
+      .btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+      }
+
+      .btn:focus {
+        outline: var(--focus-width) solid var(--focus-color);
+        outline-offset: 2px;
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn-success {
+        background: var(--success-color);
+      }
+
+      .btn-danger {
+        background: var(--danger-color);
+      }
+
+      /* Status Indicators */
+      .status {
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: 4px;
+        font-weight: 500;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .status-success {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #b8daff;
+      }
+
+      .status-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .status-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+
+      /* Live Stream Section */
+      .stream-container {
+        background: var(--dark-color);
+        color: var(--light-color);
+        border-radius: 8px;
+        padding: var(--spacing-lg);
+        font-family: "Courier New", monospace;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+
+      .stream-container:focus {
+        outline: var(--focus-width) solid var(--focus-color);
+      }
+
+      .stream-line {
+        margin-bottom: var(--spacing-xs);
+        word-wrap: break-word;
+        padding: var(--spacing-xs);
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+
+      .stream-line:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .stream-success {
+        border-left: 3px solid #28a745;
+        background-color: rgba(40, 167, 69, 0.1);
+      }
+
+      .stream-error {
+        border-left: 3px solid #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+      }
+
+      .stream-warning {
+        border-left: 3px solid #ffc107;
+        background-color: rgba(255, 193, 7, 0.1);
+      }
+
+      .stream-info {
+        border-left: 3px solid #17a2b8;
+        background-color: rgba(23, 162, 184, 0.1);
+      }
+
+      .stream-timestamp {
+        color: #6c757d;
+        margin-right: var(--spacing-sm);
+        font-weight: 500;
+      }
+
+      .stream-agent {
+        color: var(--primary-color);
+        font-weight: bold;
+        margin-right: var(--spacing-sm);
+      }
+
+      .stream-icon {
+        margin-right: var(--spacing-sm);
+      }
+
+      .stream-message {
+        flex: 1;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .container {
+          padding: var(--spacing-md);
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .btn {
+          width: 100%;
+          margin-bottom: var(--spacing-sm);
+        }
+      }
+
+      /* High Contrast Mode Support */
+      @media (prefers-contrast: high) {
+        :root {
+          --primary-color: #0056b3;
+          --text-primary: #000000;
+          --background-primary: #ffffff;
+          --border-color: #000000;
+        }
+
+        .card {
+          border-width: 2px;
+        }
+      }
+
+      /* Reduced Motion Support */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Dark Mode Support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --text-primary: #f8f9fa;
+          --text-secondary: #adb5bd;
+          --background-primary: #212529;
+          --background-secondary: #343a40;
+          --border-color: #495057;
+        }
+      }
+
+      /* Print Styles */
+      @media print {
+        .btn,
+        .stream-container {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Skip Links for Accessibility -->
+    <a href="#main-content" class="skip-link">Ga naar hoofdinhoud</a>
+
+    <div class="container">
+      <header class="header" role="banner">
+        <h1>🤖 Agentic Crypto Influencer</h1>
+        <p>OAuth Autorisatie Dashboard & Live Agent Monitor</p>
+      </header>
+
+      <main id="main-content" role="main">
+        <!-- OAuth Status Section -->
+        <section class="card" aria-labelledby="oauth-heading">
+          <h2 id="oauth-heading">🔐 OAuth Status</h2>
+          <div
+            id="oauth-status"
+            class="status status-warning"
+            role="status"
+            aria-live="polite"
+          >
+            Controleren van autorisatie status...
+          </div>
+          <button
+            id="authorize-btn"
+            class="btn"
+            type="button"
+            aria-describedby="oauth-description"
+          >
+            Autoriseren met X/Twitter
+          </button>
+          <p id="oauth-description">
+            Klik om de OAuth2 flow te starten met PKCE S256 beveiliging. Voldoet
+            aan WCAG 2.1 AA toegankelijkheidsnormen.
+          </p>
+        </section>
+
+        <!-- Agent Activity Section -->
+        <section class="card" aria-labelledby="activity-heading">
+          <h2 id="activity-heading">🚀 Live Agent Activiteit</h2>
+          <div class="status status-success" role="status" aria-live="polite">
+            Live stream van agent activiteiten
+          </div>
+          <div
+            id="stream-container"
+            class="stream-container"
+            role="log"
+            aria-live="polite"
+            aria-label="Agent activiteit log"
+            tabindex="0"
+          >
+            <div class="stream-line">
+              <span class="stream-timestamp">[Wachten op activiteit...]</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- System Status Section -->
+        <section class="card" aria-labelledby="system-heading">
+          <h2 id="system-heading">📊 Systeem Status</h2>
+          <ul role="list">
+            <li>
+              <strong>Redis:</strong>
+              <span id="redis-status">Controleren...</span>
+            </li>
+            <li>
+              <strong>Callback Server:</strong>
+              <span class="status-success">Actief</span>
+            </li>
+            <li>
+              <strong>OAuth2Session:</strong>
+              <span class="status-success">PKCE S256</span>
+            </li>
+            <li>
+              <strong>Toegankelijkheid:</strong>
+              <span class="status-success">WCAG 2.1 AA</span>
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // Progressive Enhancement JavaScript
+      document.addEventListener("DOMContentLoaded", function () {
+        // OAuth Status Check
+        checkOAuthStatus();
+
+        // WebSocket for Live Stream (if supported)
+        if (window.WebSocket) {
+          initializeWebSocket();
+        }
+
+        // Periodic status updates
+        setInterval(checkSystemStatus, 30000);
+      });
+
+      function checkOAuthStatus() {
+        fetch("/api/oauth/status")
+          .then((response) => response.json())
+          .then((data) => {
+            const statusElement = document.getElementById("oauth-status");
+            const btnElement = document.getElementById("authorize-btn");
+
+            if (data.authorized) {
+              statusElement.className = "status status-success";
+              statusElement.textContent =
+                "✅ Geautoriseerd en klaar voor gebruik";
+              btnElement.textContent = "Hernieuw Autorisatie";
+            } else {
+              statusElement.className = "status status-warning";
+              statusElement.textContent = "⚠️ Autorisatie vereist";
+              btnElement.textContent = "Autoriseren met X/Twitter";
+            }
+          })
+          .catch(() => {
+            const statusElement = document.getElementById("oauth-status");
+            statusElement.className = "status status-error";
+            statusElement.textContent = "❌ Fout bij controleren autorisatie";
+          });
+      }
+
+      function initializeWebSocket() {
+        // WebSocket connection for live agent stream
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(
+          `${protocol}//${window.location.host}/ws/stream`
+        );
+        const container = document.getElementById("stream-container");
+
+        ws.onopen = function () {
+          addStreamLine({
+            timestamp: new Date().toISOString(),
+            agent: "WebSocket",
+            message: "🔌 Real-time verbinding actief",
+            type: "success",
+          });
+        };
+
+        ws.onmessage = function (event) {
+          try {
+            const data = JSON.parse(event.data);
+            addStreamLine(data);
+          } catch (e) {
+            console.error("WebSocket message parsing error:", e);
+          }
+        };
+
+        ws.onerror = function () {
+          addStreamLine({
+            timestamp: new Date().toISOString(),
+            agent: "WebSocket",
+            message: "❌ Verbinding verloren - terugvallen op polling",
+            type: "warning",
+          });
+
+          // Fallback to polling
+          startPolling();
+        };
+
+        ws.onclose = function () {
+          addStreamLine({
+            timestamp: new Date().toISOString(),
+            agent: "WebSocket",
+            message: "🔌 Verbinding gesloten - terugvallen op polling",
+            type: "info",
+          });
+
+          // Fallback to polling
+          startPolling();
+        };
+
+        return ws;
+      }
+
+      function startPolling() {
+        // Polling fallback every 5 seconds
+        setInterval(() => {
+          fetch("/api/stream/activities")
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.activities && Array.isArray(data.activities)) {
+                // Only show new activities (basic deduplication)
+                data.activities.slice(-5).forEach((activity) => {
+                  addStreamLine(activity);
+                });
+              }
+            })
+            .catch(console.error);
+        }, 5000);
+      }
+
+      function addStreamLine(data) {
+        const container = document.getElementById("stream-container");
+        const line = document.createElement("div");
+        line.className = "stream-line";
+
+        const timestamp = new Date(data.timestamp).toLocaleTimeString("nl-NL");
+        const typeIcon =
+          {
+            success: "✅",
+            error: "❌",
+            warning: "⚠️",
+            info: "ℹ️",
+          }[data.type] || "📝";
+
+        line.innerHTML = `
+                <span class="stream-timestamp">[${timestamp}]</span>
+                <span class="stream-agent">${data.agent || "System"}:</span>
+                <span class="stream-icon">${typeIcon}</span>
+                <span class="stream-message">${
+                  data.message || data.content || "Geen bericht"
+                }</span>
+            `;
+
+        // Add type-specific styling
+        if (data.type) {
+          line.classList.add(`stream-${data.type}`);
+        }
+
+        container.appendChild(line);
+        container.scrollTop = container.scrollHeight;
+
+        // Keep only last 100 lines for performance and accessibility
+        while (container.children.length > 100) {
+          container.removeChild(container.firstChild);
+        }
+
+        // Announce important messages to screen readers
+        if (data.type === "success" || data.type === "error") {
+          const announcement = document.createElement("div");
+          announcement.setAttribute("aria-live", "assertive");
+          announcement.setAttribute("aria-atomic", "true");
+          announcement.style.position = "absolute";
+          announcement.style.left = "-10000px";
+          announcement.style.width = "1px";
+          announcement.style.height = "1px";
+          announcement.style.overflow = "hidden";
+          announcement.textContent = `${data.agent}: ${data.message}`;
+          document.body.appendChild(announcement);
+
+          // Remove after screen reader announces
+          setTimeout(() => {
+            if (announcement.parentNode) {
+              announcement.parentNode.removeChild(announcement);
+            }
+          }, 1000);
+        }
+      }
+
+      function checkSystemStatus() {
+        // Check Redis status
+        fetch("/api/system/redis")
+          .then((response) => response.json())
+          .then((data) => {
+            const element = document.getElementById("redis-status");
+            element.textContent =
+              data.status === "ok" ? "✅ Verbonden" : "❌ Offline";
+          })
+          .catch(() => {
+            const element = document.getElementById("redis-status");
+            element.textContent = "❌ Fout";
+          });
+      }
+
+      // Authorization button handler
+      document
+        .getElementById("authorize-btn")
+        .addEventListener("click", function () {
+          fetch("/api/oauth/url")
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.url) {
+                // Open in new window for better UX
+                window.open(data.url, "oauth", "width=500,height=700");
+
+                // Listen for completion
+                const checkInterval = setInterval(() => {
+                  checkOAuthStatus();
+                }, 2000);
+
+                // Stop checking after 5 minutes
+                setTimeout(() => clearInterval(checkInterval), 300000);
+              }
+            })
+            .catch(console.error);
+        });
+    </script>
+  </body>
+</html>

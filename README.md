@@ -80,12 +80,74 @@ SearchAgent → SummaryAgent → PublishAgent
 
 ### Prerequisites
 
-- Python 3.13+
-- Poetry for dependency management
-- Redis server (for state persistence)
+- **Python 3.13+**
+- **Poetry** for dependency management
+- **Redis server** (for state persistence)
 - API keys for various services
 
 ### Installation
+
+#### **For macOS (without Homebrew)**
+
+Since Homebrew doesn't work on your macOS version, here are alternative installation methods:
+
+1. **Install Python 3.13+**
+
+   ```bash
+   # Download from official Python website
+   # https://www.python.org/downloads/macos/
+   # Or use pyenv if available:
+   curl https://pyenv.run | bash
+   pyenv install 3.13.0
+   pyenv global 3.13.0
+   ```
+
+2. **Install Poetry**
+
+   ```bash
+   curl -sSL https://install.python-poetry.org | python3 -
+   # Add to PATH: export PATH="$HOME/.local/bin:$PATH"
+   ```
+
+3. **Install Redis (alternatives to Homebrew)**
+
+   **Option A: Docker Redis**
+
+   ```bash
+   # Install Docker Desktop first
+   docker run -d -p 6379:6379 --name redis redis:alpine
+   ```
+
+   **Option B: Redis from source**
+
+   ```bash
+   wget http://download.redis.io/redis-stable.tar.gz
+   tar xzf redis-stable.tar.gz
+   cd redis-stable
+   make
+   make install
+   redis-server
+   ```
+
+   **Option C: MacPorts (if available)**
+
+   ```bash
+   sudo port install redis
+   sudo port load redis
+   ```
+
+#### **For Linux/Ubuntu**
+
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install python3.13 python3-pip redis-server
+
+# Install Poetry
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+#### **General Setup**
 
 1. **Clone the repository**
 
@@ -101,10 +163,44 @@ SearchAgent → SummaryAgent → PublishAgent
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
    ```
+
+4. **Start Redis server**
+
+   ```bash
+   # If using Docker:
+   docker start redis
+
+   # If installed from source:
+   redis-server
+
+   # If using MacPorts:
+   sudo port load redis
+   ```
+
+5. **OAuth Authorization Setup**
+
+   The bot uses OAuth2 with PKCE for secure Twitter authentication:
+
+   ```bash
+   # Start the callback server
+   poetry run python src/agentic_crypto_influencer/tools/callback_server.py
+
+   # Visit http://localhost:5000 in your browser
+   # Click "Authorize with X/Twitter"
+   # Complete the OAuth flow
+   ```
+
+### macOS-Specific Notes
+
+- **No Homebrew Required**: This setup works without Homebrew dependencies
+- **Port Issues**: If port 5000 is occupied by AirPlay, disable it in:
+  `System Preferences → General → AirDrop & Handoff → AirPlay Receiver`
+- **Python Version**: Ensure you're using Python 3.13+ with `python3 --version`
 
 ### Required Environment Variables
 
@@ -137,7 +233,58 @@ REDIS_URL=redis://localhost:6379
 poetry run python src/agentic_crypto_influencer/graphflow/graphflow.py
 ```
 
-## 🔧 Configuration
+## 🌐 Frontend Dashboard
+
+De bot heeft nu een moderne web-gebaseerde dashboard voor OAuth autorisatie en real-time monitoring:
+
+### ✨ Features
+
+- **🔐 OAuth2 Dashboard**: Veilige autorisatie met X/Twitter via PKCE S256
+- **📱 Progressive Web App**: Installeerbaar op desktop en mobiel
+- **♿ WCAG 2.1 AA Compliant**: Volledig toegankelijk volgens wettelijke normen
+- **🔌 Real-time Streaming**: Live agent activiteit via WebSockets
+- **📊 System Monitoring**: Redis status en connectiviteit checks
+- **🎨 Responsive Design**: Werkt op alle apparaten
+
+### 🚀 Dashboard Starten
+
+```bash
+# Start de frontend server
+python -m src.agentic_crypto_influencer.tools.frontend_server
+
+# Of gebruik de nieuwe server direct
+cd src/agentic_crypto_influencer/tools
+python frontend_server.py
+```
+
+### 📍 Endpoints
+
+- **Dashboard**: `http://localhost:8000/` - Hoofddashboard
+- **OAuth Status**: `/api/oauth/status` - Controleer autorisatie status
+- **OAuth URL**: `/api/oauth/url` - Genereer autorisatie URL
+- **System Status**: `/api/system/redis` - Redis connectiviteit
+- **Live Stream**: `/api/stream/activities` - Recent agent activiteit
+- **WebSocket**: `/ws/stream` - Real-time updates
+
+### 🔧 Configuratie
+
+De frontend server gebruikt dezelfde omgevingsvariabelen als de callback server:
+
+- `X_CLIENT_ID`: Twitter API Client ID
+- `X_CLIENT_SECRET`: Twitter API Client Secret
+- `X_REDIRECT_URI`: OAuth redirect URI
+- `REDIS_HOST`: Redis server host (standaard: localhost)
+- `REDIS_PORT`: Redis server poort (standaard: 6379)
+- `PORT`: Server poort voor Render.com deployment
+
+### ♿ Toegankelijkheidsfeatures
+
+- **Keyboard Navigation**: Volledig toetsenbord toegankelijk
+- **Screen Reader Support**: Aria-labels en live regions
+- **High Contrast Mode**: Automatische ondersteuning
+- **Reduced Motion**: Respecteert gebruikersvoorkeuren
+- **Focus Indicators**: Duidelijke focus styling
+- **Skip Links**: Snelle navigatie voor screenreaders
 
 ### Agent Behavior
 

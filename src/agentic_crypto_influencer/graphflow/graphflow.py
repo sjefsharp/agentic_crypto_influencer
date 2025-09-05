@@ -73,7 +73,7 @@ async def main() -> None:
 
         # Initialize Redis handler
         logger.debug("Initializing Redis handler")
-        redis_handler = RedisHandler()
+        redis_handler = RedisHandler(lazy_connect=True)
 
         # Load team_state from Redis if available
         logger.debug("Loading team state from Redis")
@@ -101,13 +101,36 @@ async def main() -> None:
         event_count = 0
         async for event in stream:
             event_count += 1
-            logger.info(
-                f"Workflow event {event_count}",
-                extra={
-                    "event_number": event_count,
-                    "event_preview": str(event)[:200],  # First 200 chars for logging
-                },
-            )
+
+            # Log detailed event information
+            event_type = type(event).__name__
+            logger.info(f"Workflow event {event_count} - Type: {event_type}")
+
+            # Check for specific event attributes
+            if hasattr(event, "source"):
+                logger.info(f"  Source: {event.source}")
+            if hasattr(event, "target"):
+                logger.info(f"  Target: {event.target}")
+            if hasattr(event, "data"):
+                logger.info(f"  Data: {event.data}")
+            if hasattr(event, "messages") and event.messages:
+                logger.info(f"  Messages ({len(event.messages)}):")
+                for i, msg in enumerate(event.messages[-3:]):  # Last 3 messages
+                    logger.info(f"    {i}: {str(msg)[:200]}")
+            if hasattr(event, "content"):
+                logger.info(f"  Content: {event.content}")
+
+            # Log full event for debugging (truncated)
+            full_event_str = str(event)
+            if (
+                "post" in full_event_str.lower()
+                or "twitter" in full_event_str.lower()
+                or "x.com" in full_event_str.lower()
+            ):
+                logger.info("  *** POTENTIAL TWITTER POST EVENT ***")
+                logger.info(f"  Full event: {full_event_str[:500]}")
+
+            logger.debug(f"  Full event preview: {full_event_str[:300]}")
 
         # Save state back to Redis
         logger.debug("Saving team state to Redis")
