@@ -18,6 +18,12 @@ from typing import Any
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO, emit
 import requests
+import json
+
+from src.agentic_crypto_influencer.tools.scheduler_manager import SchedulerManager
+
+# Global scheduler manager instance
+scheduler_manager = SchedulerManager()
 
 # Add project root to Python path for Render.com compatibility
 project_root = Path(__file__).parent.parent.parent.parent
@@ -351,6 +357,153 @@ if socketio_available:
         """Handle WebSocket disconnection."""
         logger.info(f"Client disconnected: {request.sid}")
         connected_clients.discard(request.sid)
+
+
+@app.route("/api/jobs/create", methods=["POST"])  # type: ignore[misc]
+def create_scheduled_job() -> dict[str, Any]:
+    """Create a scheduled job."""
+    try:
+        # Get JSON data from request
+        try:
+            data = request.get_json()
+        except Exception:
+            # Handle cases where request doesn't have valid JSON (wrong content-type, etc.)
+            return jsonify({"error": "No data provided"}), 400  # type: ignore[no-any-return]
+
+        if not data:
+            return jsonify({"error": "No data provided"}), 400  # type: ignore[no-any-return]
+        if "schedule_config" in data and "schedule_value" not in data:
+            # Convert schedule_config to schedule_value for backward compatibility
+            data["schedule_value"] = json.dumps(data["schedule_config"])
+        elif "schedule_value" not in data and "schedule_config" not in data:
+            return jsonify({"error": "Missing required fields: schedule_value or schedule_config"}), 400  # type: ignore[no-any-return]
+
+        required_fields = ["job_type", "schedule_type", "schedule_value"]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400  # type: ignore[no-any-return]
+
+        # Extract parameters - job_name is optional, use default if not provided
+        job_type = data["job_type"]
+        schedule_type = data["schedule_type"]
+        schedule_value = data["schedule_value"]
+        job_name = data.get("job_name", f"Job-{datetime.now().isoformat()}")
+        job_description = data.get("job_description", "")
+        job_args = data.get("job_args")
+
+        # Create the job
+        result = scheduler_manager.create_scheduled_job(
+            job_type=job_type,
+            schedule_type=schedule_type,
+            schedule_value=schedule_value,
+            job_name=job_name,
+            job_description=job_description,
+            job_args=job_args,
+        )
+
+        if result.get("success", False):
+            return jsonify({  # type: ignore[no-any-return]
+                "message": "Job created successfully",
+                "job_id": result.get("job_id", "unknown")
+            })
+        else:
+            return jsonify({"error": result.get("error", "Failed to create job")}), 400  # type: ignore[no-any-return]
+
+    except Exception as e:
+        logger.error(f"Error creating scheduled job: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/jobs/list", methods=["GET"])  # type: ignore[misc]
+def list_scheduled_jobs() -> dict[str, Any]:
+    """List all scheduled jobs."""
+    try:
+        jobs = scheduler_manager.get_scheduled_jobs()
+        return jsonify({"jobs": jobs})  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error listing scheduled jobs: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/jobs/cancel/<job_id>", methods=["DELETE"])  # type: ignore[misc]
+def cancel_scheduled_job(job_id: str) -> dict[str, Any]:
+    """Cancel a scheduled job."""
+    try:
+        result = scheduler_manager.cancel_job(job_id)
+        if result["success"]:
+            return jsonify({"message": "Job cancelled successfully"})  # type: ignore[no-any-return]
+        else:
+            return jsonify({"error": result.get("error", "Failed to cancel job")}), 400  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error cancelling scheduled job: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/jobs/history", methods=["GET"])  # type: ignore[misc]
+def get_job_history() -> dict[str, Any]:
+    """Get job execution history."""
+    try:
+        history = scheduler_manager.get_job_history()
+        return jsonify({"history": history})  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error getting job history: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/graphflow/start", methods=["POST"])  # type: ignore[misc]
+def start_graphflow() -> dict[str, Any]:
+    """Start GraphFlow process."""
+    try:
+        if scheduler_manager is None:  # type: ignore[comparison-overlap]
+            return jsonify({"error": "Scheduler not available"}), 500  # type: ignore[no-any-return]
+
+        result = scheduler_manager.start_graphflow()
+        if result.get("success", False):
+            return jsonify({
+                "message": result.get("message", "GraphFlow started successfully"),
+                "pid": result.get("pid")
+            })  # type: ignore[no-any-return]
+        else:
+            return jsonify({"error": result.get("error", "Failed to start GraphFlow")}), 400  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error starting GraphFlow: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/graphflow/stop", methods=["POST"])  # type: ignore[misc]
+def stop_graphflow() -> dict[str, Any]:
+    """Stop GraphFlow process."""
+    try:
+        result = scheduler_manager.stop_graphflow()
+        if result.get("success", False):
+            return jsonify({"message": "GraphFlow stopped successfully"})  # type: ignore[no-any-return]
+        else:
+            return jsonify({"error": result.get("error", "Failed to stop GraphFlow")}), 400  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error stopping GraphFlow: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
+
+
+@app.route("/api/graphflow/status", methods=["GET"])  # type: ignore[misc]
+def get_graphflow_status() -> dict[str, Any]:
+    """Get GraphFlow status."""
+    try:
+        status = scheduler_manager.get_graphflow_status()
+        # Map the response to match test expectations and handle both real and mock responses
+        response_data = {
+            "running": status.get("is_running", status.get("running", False)),
+            "pid": status.get("pid"),
+            "status": status.get("status", "unknown")
+        }
+
+        # Add start_time if available (for compatibility with tests)
+        if "start_time" in status:
+            response_data["start_time"] = status["start_time"]
+
+        return jsonify(response_data)  # type: ignore[no-any-return]
+    except Exception as e:
+        logger.error(f"Error getting GraphFlow status: {e}")
+        return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
 
 
 @app.route("/api/stream/activities")  # type: ignore[misc]

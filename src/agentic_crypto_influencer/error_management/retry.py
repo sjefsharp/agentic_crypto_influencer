@@ -7,6 +7,7 @@ and circuit breaker patterns to handle transient failures gracefully.
 
 import asyncio
 from collections.abc import Callable
+from datetime import UTC, datetime
 from enum import Enum
 from functools import wraps
 import time
@@ -16,12 +17,9 @@ from src.agentic_crypto_influencer.config.app_constants import (
     COMPONENT_CIRCUIT_BREAKER,
     COMPONENT_RETRY,
 )
-from src.agentic_crypto_influencer.config.error_constants import ERROR_VALIDATION_GENERAL
 from src.agentic_crypto_influencer.config.logging_config import get_logger
 from src.agentic_crypto_influencer.error_management.exceptions import (
     APIConnectionError,
-    RateLimitError,
-    RetryableError,
     get_retry_delay,
     is_retryable_error,
 )
@@ -80,7 +78,7 @@ class CircuitBreaker:
         return (
             self.state == CircuitState.OPEN
             and self.last_failure_time is not None
-            and time.time() - self.last_failure_time >= self.reset_timeout
+            and datetime.now(UTC).timestamp() - self.last_failure_time >= self.reset_timeout
         )
 
     def _record_success(self) -> None:
@@ -102,7 +100,7 @@ class CircuitBreaker:
     def _record_failure(self) -> None:
         """Record a failed operation."""
         self.failure_count += 1
-        self.last_failure_time = time.time()
+        self.last_failure_time = datetime.now(UTC).timestamp()
         self.success_count = 0
 
         if self.state == CircuitState.CLOSED and self.failure_count >= self.failure_threshold:
@@ -244,7 +242,7 @@ def retry(
             if last_exception:
                 raise last_exception
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -334,7 +332,7 @@ def async_retry(
             if last_exception:
                 raise last_exception
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 

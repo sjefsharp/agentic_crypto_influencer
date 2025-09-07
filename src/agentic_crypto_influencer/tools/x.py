@@ -13,22 +13,22 @@ from src.agentic_crypto_influencer.error_management.error_manager import ErrorMa
 try:
     from src.agentic_crypto_influencer.tools.oauth_handler import OAuthHandler
 except ImportError:
-    OAuthHandler = None  # type: ignore
+    OAuthHandler = None  # type: ignore[assignment,misc]
 
 try:
     from src.agentic_crypto_influencer.tools.post_handler import PostHandler
 except ImportError:
-    PostHandler = None  # type: ignore
+    PostHandler = None  # type: ignore[assignment,misc]
 
 try:
     from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
 except ImportError:
-    RedisHandler = None  # type: ignore
+    RedisHandler = None  # type: ignore[assignment,misc]
 
 try:
     from src.agentic_crypto_influencer.tools.trends_handler import TrendsHandler
 except ImportError:
-    TrendsHandler = None  # type: ignore
+    TrendsHandler = None  # type: ignore[assignment,misc]
 
 from src.agentic_crypto_influencer.config.key_constants import X_USER_ID
 
@@ -155,7 +155,7 @@ class X(LoggerMixin):
                 raise RuntimeError("Failed to initialize post handler")
 
             self.logger.info("Post handler initialized successfully, calling post_message")
-            result: dict[str, Any] = self.post_handler.post_message(post)  # type: ignore[no-untyped-call]
+            result: dict[str, Any] = self.post_handler.post_message(post)
             self.logger.info(f"Successfully posted to X. Response: {result}")
             return result
         except Exception as e:
@@ -183,7 +183,7 @@ class X(LoggerMixin):
         self._ensure_token_initialized()
         if self.trends_handler is None:  # Safe check instead of assert
             raise RuntimeError("Failed to initialize trends handler")
-        return self.trends_handler.get_personalized_trends(user_id, max_results, exclude)  # type: ignore[no-untyped-call,no-any-return]
+        return self.trends_handler.get_personalized_trends(user_id, max_results, exclude)  # type: ignore[no-any-return]
 
 
 def main() -> None:

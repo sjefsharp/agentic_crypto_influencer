@@ -165,6 +165,120 @@
         background: var(--danger-color);
       }
 
+      .btn-secondary {
+        background: var(--text-secondary);
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+      }
+
+      .btn-outline:hover {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      /* Form Styles */
+      .form-group {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: var(--spacing-xs);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .form-control {
+        width: 100%;
+        padding: var(--spacing-sm);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 1rem;
+        transition: border-color 0.2s ease;
+      }
+
+      .form-control:focus {
+        outline: var(--focus-width) solid var(--focus-color);
+        outline-offset: 2px;
+        border-color: var(--primary-color);
+      }
+
+      /* Job List Styles */
+      .job-item {
+        background: var(--background-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .job-info {
+        flex: 1;
+      }
+
+      .job-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-xs);
+      }
+
+      .job-details {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .job-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+      }
+
+      .btn-small {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.875rem;
+        min-height: 32px;
+        min-width: 32px;
+      }
+
+      /* History Styles */
+      .history-item {
+        padding: var(--spacing-sm);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.9rem;
+      }
+
+      .history-item:last-child {
+        border-bottom: none;
+      }
+
+      .history-timestamp {
+        color: var(--text-secondary);
+        font-family: "Courier New", monospace;
+      }
+
+      .history-status {
+        font-weight: 600;
+      }
+
+      .history-success {
+        color: var(--success-color);
+      }
+
+      .history-error {
+        color: var(--danger-color);
+      }
+
       /* Status Indicators */
       .status {
         padding: var(--spacing-sm) var(--spacing-md);
@@ -370,6 +484,199 @@
             <div class="stream-line">
               <span class="stream-timestamp">[Wachten op activiteit...]</span>
             </div>
+          </div>
+        </section>
+
+        <!-- GraphFlow Control Section -->
+        <section class="card" aria-labelledby="graphflow-heading">
+          <h2 id="graphflow-heading">🤖 GraphFlow Beheer</h2>
+          <div
+            class="status"
+            id="graphflow-status"
+            role="status"
+            aria-live="polite"
+          >
+            Status controleren...
+          </div>
+          <div style="margin-top: var(--spacing-md)">
+            <button
+              id="start-graphflow-btn"
+              class="btn"
+              onclick="startGraphFlow()"
+              aria-describedby="graphflow-description"
+            >
+              ▶️ Start GraphFlow
+            </button>
+            <button
+              id="stop-graphflow-btn"
+              class="btn btn-secondary"
+              onclick="stopGraphFlow()"
+              aria-describedby="graphflow-description"
+              style="margin-left: var(--spacing-sm)"
+            >
+              ⏹️ Stop GraphFlow
+            </button>
+            <button
+              id="refresh-status-btn"
+              class="btn btn-outline"
+              onclick="refreshGraphFlowStatus()"
+              style="margin-left: var(--spacing-sm)"
+            >
+              🔄 Status Vernieuwen
+            </button>
+          </div>
+          <p
+            id="graphflow-description"
+            style="
+              margin-top: var(--spacing-md);
+              font-size: 0.9rem;
+              color: var(--text-secondary);
+            "
+          >
+            Beheer de GraphFlow agent voor geautomatiseerde crypto-analyses en
+            posts.
+          </p>
+        </section>
+
+        <!-- Job Scheduler Section -->
+        <section class="card" aria-labelledby="scheduler-heading">
+          <h2 id="scheduler-heading">⏰ Post Scheduler</h2>
+          <div style="margin-bottom: var(--spacing-md)">
+            <h3 style="font-size: 1.2rem; margin-bottom: var(--spacing-sm)">
+              Nieuwe Geplande Post
+            </h3>
+            <form id="schedule-form" onsubmit="createScheduledJob(event)">
+              <div style="margin-bottom: var(--spacing-md)">
+                <label
+                  for="job-type"
+                  style="
+                    display: block;
+                    margin-bottom: var(--spacing-xs);
+                    font-weight: 600;
+                  "
+                >
+                  Post Type:
+                </label>
+                <select
+                  id="job-type"
+                  name="job-type"
+                  required
+                  style="
+                    width: 100%;
+                    padding: var(--spacing-sm);
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                  "
+                >
+                  <option value="single_post">Enkele Post</option>
+                  <option value="graphflow">GraphFlow Analyse</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom: var(--spacing-md)">
+                <label
+                  for="schedule-type"
+                  style="
+                    display: block;
+                    margin-bottom: var(--spacing-xs);
+                    font-weight: 600;
+                  "
+                >
+                  Schema Type:
+                </label>
+                <select
+                  id="schedule-type"
+                  name="schedule-type"
+                  required
+                  onchange="toggleScheduleConfig()"
+                  style="
+                    width: 100%;
+                    padding: var(--spacing-sm);
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                  "
+                >
+                  <option value="once">Eenmalig</option>
+                  <option value="interval">Interval</option>
+                  <option value="cron">Cron Expressie</option>
+                </select>
+              </div>
+
+              <div
+                id="schedule-config"
+                style="margin-bottom: var(--spacing-md)"
+              >
+                <!-- Dynamic schedule configuration will be inserted here -->
+              </div>
+
+              <div style="margin-bottom: var(--spacing-md)">
+                <label
+                  for="job-name"
+                  style="
+                    display: block;
+                    margin-bottom: var(--spacing-xs);
+                    font-weight: 600;
+                  "
+                >
+                  Job Naam (optioneel):
+                </label>
+                <input
+                  type="text"
+                  id="job-name"
+                  name="job-name"
+                  placeholder="Bijv: Dagelijkse crypto update"
+                  style="
+                    width: 100%;
+                    padding: var(--spacing-sm);
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                  "
+                />
+              </div>
+
+              <button type="submit" class="btn">📅 Job Aanmaken</button>
+            </form>
+          </div>
+
+          <div style="margin-top: var(--spacing-lg)">
+            <h3 style="font-size: 1.2rem; margin-bottom: var(--spacing-sm)">
+              Actieve Jobs
+            </h3>
+            <div id="jobs-list" style="margin-bottom: var(--spacing-md)">
+              <div style="text-align: center; color: var(--text-secondary)">
+                Laden van jobs...
+              </div>
+            </div>
+            <button class="btn btn-outline" onclick="refreshJobsList()">
+              🔄 Jobs Vernieuwen
+            </button>
+          </div>
+
+          <div style="margin-top: var(--spacing-lg)">
+            <h3 style="font-size: 1.2rem; margin-bottom: var(--spacing-sm)">
+              Job Geschiedenis
+            </h3>
+            <div
+              id="job-history"
+              style="
+                max-height: 200px;
+                overflow-y: auto;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: var(--spacing-sm);
+              "
+            >
+              <div style="text-align: center; color: var(--text-secondary)">
+                Laden van geschiedenis...
+              </div>
+            </div>
+            <button
+              class="btn btn-outline"
+              onclick="refreshJobHistory()"
+              style="margin-top: var(--spacing-sm)"
+            >
+              🔄 Geschiedenis Vernieuwen
+            </button>
           </div>
         </section>
 
@@ -603,6 +910,374 @@
             })
             .catch(console.error);
         });
+
+      // GraphFlow Control Functions
+      function startGraphFlow() {
+        const startBtn = document.getElementById("start-graphflow-btn");
+        const statusEl = document.getElementById("graphflow-status");
+
+        startBtn.disabled = true;
+        startBtn.textContent = "⏳ Starten...";
+        statusEl.textContent = "GraphFlow wordt gestart...";
+        statusEl.className = "status status-warning";
+
+        fetch("/api/graphflow/start", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              statusEl.textContent = `✅ ${data.message}`;
+              statusEl.className = "status status-success";
+              if (data.pid) {
+                statusEl.textContent += ` (PID: ${data.pid})`;
+              }
+            } else if (data.error) {
+              statusEl.textContent = `❌ ${data.error}`;
+              statusEl.className = "status status-error";
+            }
+          })
+          .catch((error) => {
+            console.error("Error starting GraphFlow:", error);
+            statusEl.textContent = `❌ Fout bij starten: ${error.message}`;
+            statusEl.className = "status status-error";
+          })
+          .finally(() => {
+            startBtn.disabled = false;
+            startBtn.textContent = "▶️ Start GraphFlow";
+          });
+      }
+
+      function stopGraphFlow() {
+        const stopBtn = document.getElementById("stop-graphflow-btn");
+        const statusEl = document.getElementById("graphflow-status");
+
+        stopBtn.disabled = true;
+        stopBtn.textContent = "⏳ Stoppen...";
+        statusEl.textContent = "GraphFlow wordt gestopt...";
+        statusEl.className = "status status-warning";
+
+        fetch("/api/graphflow/stop", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              statusEl.textContent = `⏹️ ${data.message}`;
+              statusEl.className = "status status-success";
+            } else if (data.error) {
+              statusEl.textContent = `❌ ${data.error}`;
+              statusEl.className = "status status-error";
+            }
+          })
+          .catch((error) => {
+            console.error("Error stopping GraphFlow:", error);
+            statusEl.textContent = `❌ Fout bij stoppen: ${error.message}`;
+            statusEl.className = "status status-error";
+          })
+          .finally(() => {
+            stopBtn.disabled = false;
+            stopBtn.textContent = "⏹️ Stop GraphFlow";
+          });
+      }
+
+      function refreshGraphFlowStatus() {
+        const statusEl = document.getElementById("graphflow-status");
+
+        statusEl.textContent = "Status controleren...";
+        statusEl.className = "status";
+
+        fetch("/api/graphflow/status")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.running) {
+              statusEl.textContent = `✅ GraphFlow is actief`;
+              statusEl.className = "status status-success";
+              if (data.pid) {
+                statusEl.textContent += ` (PID: ${data.pid})`;
+              }
+              if (data.start_time) {
+                const startTime = new Date(data.start_time);
+                statusEl.textContent += ` - Gestart: ${startTime.toLocaleString(
+                  "nl-NL"
+                )}`;
+              }
+            } else {
+              statusEl.textContent = "⏹️ GraphFlow is niet actief";
+              statusEl.className = "status";
+            }
+          })
+          .catch((error) => {
+            console.error("Error getting GraphFlow status:", error);
+            statusEl.textContent = `❌ Fout bij status check: ${error.message}`;
+            statusEl.className = "status status-error";
+          });
+      }
+
+      // Scheduler Functions
+      function toggleScheduleConfig() {
+        const scheduleType = document.getElementById("schedule-type").value;
+        const configDiv = document.getElementById("schedule-config");
+
+        let configHtml = "";
+
+        if (scheduleType === "once") {
+          configHtml = `
+            <div class="form-group">
+              <label for="run-date" class="form-label">Uitvoering Datum & Tijd:</label>
+              <input
+                type="datetime-local"
+                id="run-date"
+                name="run-date"
+                required
+                class="form-control"
+              />
+            </div>
+          `;
+        } else if (scheduleType === "interval") {
+          configHtml = `
+            <div class="form-group">
+              <label for="interval-value" class="form-label">Interval:</label>
+              <input
+                type="number"
+                id="interval-value"
+                name="interval-value"
+                min="1"
+                required
+                class="form-control"
+                style="width: 100px; display: inline-block;"
+              />
+              <select
+                id="interval-unit"
+                name="interval-unit"
+                required
+                class="form-control"
+                style="width: 150px; display: inline-block; margin-left: 10px;"
+              >
+                <option value="minutes">Minuten</option>
+                <option value="hours">Uren</option>
+                <option value="days">Dagen</option>
+              </select>
+            </div>
+          `;
+        } else if (scheduleType === "cron") {
+          configHtml = `
+            <div class="form-group">
+              <label for="cron-expression" class="form-label">Cron Expressie:</label>
+              <input
+                type="text"
+                id="cron-expression"
+                name="cron-expression"
+                placeholder="0 9 * * MON-FRI"
+                required
+                class="form-control"
+              />
+              <small style="color: var(--text-secondary); margin-top: 5px; display: block;">
+                Formaat: seconde minuut uur dag maand dag_van_week<br>
+                Voorbeeld: "0 9 * * MON-FRI" = elke weekdag om 9:00
+              </small>
+            </div>
+          `;
+        }
+
+        configDiv.innerHTML = configHtml;
+      }
+
+      function createScheduledJob(event) {
+        event.preventDefault();
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const formData = new FormData(event.target);
+
+        const jobData = {
+          job_type: formData.get("job-type"),
+          schedule_type: formData.get("schedule-type"),
+          job_name: formData.get("job-name") || null,
+          schedule_config: {},
+        };
+
+        // Build schedule config based on type
+        if (jobData.schedule_type === "once") {
+          jobData.schedule_config.run_date = formData.get("run-date");
+        } else if (jobData.schedule_type === "interval") {
+          jobData.schedule_config.interval_value = parseInt(
+            formData.get("interval-value")
+          );
+          jobData.schedule_config.interval_unit = formData.get("interval-unit");
+        } else if (jobData.schedule_type === "cron") {
+          jobData.schedule_config.cron_expression =
+            formData.get("cron-expression");
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "⏳ Aanmaken...";
+
+        fetch("/api/jobs/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(jobData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(`✅ ${data.message}`);
+              event.target.reset();
+              toggleScheduleConfig(); // Clear dynamic fields
+              refreshJobsList();
+            } else if (data.error) {
+              alert(`❌ ${data.error}`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error creating job:", error);
+            alert(`❌ Fout bij aanmaken job: ${error.message}`);
+          })
+          .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "📅 Job Aanmaken";
+          });
+      }
+
+      function refreshJobsList() {
+        const jobsListEl = document.getElementById("jobs-list");
+        jobsListEl.innerHTML =
+          '<div style="text-align: center; color: var(--text-secondary);">Laden...</div>';
+
+        fetch("/api/jobs/list")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.jobs && data.jobs.length > 0) {
+              jobsListEl.innerHTML = data.jobs
+                .map(
+                  (job) => `
+                <div class="job-item">
+                  <div class="job-info">
+                    <div class="job-name">${job.name || job.id}</div>
+                    <div class="job-details">
+                      Type: ${job.type} | Schema: ${job.schedule_type}<br>
+                      Volgende run: ${
+                        job.next_run
+                          ? new Date(job.next_run).toLocaleString("nl-NL")
+                          : "N/A"
+                      }
+                    </div>
+                  </div>
+                  <div class="job-actions">
+                    <button
+                      class="btn btn-danger btn-small"
+                      onclick="cancelJob('${job.id}')"
+                    >
+                      ❌ Annuleren
+                    </button>
+                  </div>
+                </div>
+              `
+                )
+                .join("");
+            } else {
+              jobsListEl.innerHTML =
+                '<div style="text-align: center; color: var(--text-secondary);">Geen actieve jobs</div>';
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading jobs:", error);
+            jobsListEl.innerHTML =
+              '<div style="text-align: center; color: var(--danger-color);">Fout bij laden jobs</div>';
+          });
+      }
+
+      function cancelJob(jobId) {
+        if (!confirm("Weet je zeker dat je deze job wilt annuleren?")) {
+          return;
+        }
+
+        fetch(`/api/jobs/cancel/${jobId}`, {
+          method: "DELETE",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.message) {
+              alert(`✅ ${data.message}`);
+              refreshJobsList();
+            } else if (data.error) {
+              alert(`❌ ${data.error}`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error cancelling job:", error);
+            alert(`❌ Fout bij annuleren: ${error.message}`);
+          });
+      }
+
+      function refreshJobHistory() {
+        const historyEl = document.getElementById("job-history");
+        historyEl.innerHTML =
+          '<div style="text-align: center; color: var(--text-secondary);">Laden...</div>';
+
+        fetch("/api/jobs/history")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.history && data.history.length > 0) {
+              historyEl.innerHTML = data.history
+                .map(
+                  (item) => `
+                <div class="history-item">
+                  <div class="history-timestamp">${new Date(
+                    item.timestamp
+                  ).toLocaleString("nl-NL")}</div>
+                  <div>
+                    <strong>${item.job_name || item.job_id}</strong>
+                    <span class="history-status ${
+                      item.status === "success"
+                        ? "history-success"
+                        : "history-error"
+                    }">
+                      ${item.status === "success" ? "✅" : "❌"} ${item.status}
+                    </span>
+                  </div>
+                  ${
+                    item.message
+                      ? `<div style="font-size: 0.8rem; color: var(--text-secondary);">${item.message}</div>`
+                      : ""
+                  }
+                </div>
+              `
+                )
+                .join("");
+            } else {
+              historyEl.innerHTML =
+                '<div style="text-align: center; color: var(--text-secondary);">Geen geschiedenis beschikbaar</div>';
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading job history:", error);
+            historyEl.innerHTML =
+              '<div style="text-align: center; color: var(--danger-color);">Fout bij laden geschiedenis</div>';
+          });
+      }
+
+      // Initialize scheduler interface
+      function initializeScheduler() {
+        toggleScheduleConfig(); // Set initial schedule config
+        refreshGraphFlowStatus();
+        refreshJobsList();
+        refreshJobHistory();
+      }
+
+      // Add to page initialization
+      const originalInit = window.onload;
+      window.onload = function () {
+        if (originalInit) originalInit();
+        initializeScheduler();
+      };
     </script>
   </body>
 </html>

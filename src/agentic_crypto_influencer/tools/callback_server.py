@@ -6,11 +6,11 @@ Optimized for Render.com deployment with accessibility support.
 """
 
 import base64
+from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
 import sys
-import time
 
 from flask import Flask, request
 import requests
@@ -128,7 +128,7 @@ def get_and_save_tokens(code: str) -> bool:
             "token_type": token_type,
             "expires_in": expires_in,
             "scope": token_response.get("scope", X_SCOPES.split()),
-            "expires_at": time.time() + expires_in,
+            "expires_at": datetime.now(UTC).timestamp() + expires_in,
         }
 
         redis_handler.set("token", json.dumps(token_data))
@@ -151,7 +151,7 @@ def get_and_save_tokens(code: str) -> bool:
         return False
 
 
-@app.route("/")  # type: ignore[misc]
+@app.route("/")
 def home() -> tuple[str, int]:
     """Home page with service info and authorization link using OAuth2Session."""
     if not X_CLIENT_ID or not X_CLIENT_SECRET or not X_REDIRECT_URI:
@@ -200,13 +200,13 @@ def home() -> tuple[str, int]:
     )
 
 
-@app.route("/health", methods=["GET"])  # type: ignore[misc]
+@app.route("/health", methods=["GET"])
 def health() -> tuple[str, int]:
     """Health check endpoint for Render.com."""
     return "✅ OAuth Callback Service is healthy", 200
 
 
-@app.route("/callback", methods=["GET"])  # type: ignore[misc]
+@app.route("/callback", methods=["GET"])
 def callback() -> tuple[str, int]:
     """Process OAuth callback and save tokens to Redis."""
     code = request.args.get("code")
@@ -229,7 +229,7 @@ def callback() -> tuple[str, int]:
         return "❌ Fout: Geen autorisatiecode gevonden.", 400
 
 
-@app.route("/test_authorization", methods=["GET"])  # type: ignore[misc]
+@app.route("/test_authorization", methods=["GET"])
 def test_authorization() -> tuple[str, int]:
     """Check if tokens are stored in Redis (masked for security)."""
     redis_handler = RedisHandler(lazy_connect=True)

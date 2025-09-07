@@ -9,14 +9,14 @@ import tempfile
 import pytest
 
 
-@pytest.fixture(scope="session")  # type: ignore[misc]
+@pytest.fixture
 def temp_dir() -> Generator[Path]:
     """Create a temporary directory for the entire test session."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield Path(tmp_dir)
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def sample_crypto_data() -> dict[str, dict[str, str | float | int]]:
     """Sample cryptocurrency data for testing."""
     return {
@@ -35,7 +35,7 @@ def sample_crypto_data() -> dict[str, dict[str, str | float | int]]:
     }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_api_response() -> dict[str, str | dict[str, float | int | str]]:
     """Mock API response for testing."""
     return {
@@ -48,7 +48,7 @@ def mock_api_response() -> dict[str, str | dict[str, float | int | str]]:
     }
 
 
-@pytest.fixture(autouse=True)  # type: ignore[misc]
+@pytest.fixture
 def setup_test_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Setup test environment with temporary paths and mocked external dependencies."""
     # Mock environment variables for testing

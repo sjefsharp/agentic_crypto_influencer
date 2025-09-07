@@ -1,4 +1,4 @@
-from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.agents import AssistantAgent  # type: ignore[import]
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from src.agentic_crypto_influencer.config.search_agent_constants import (
@@ -8,7 +8,7 @@ from src.agentic_crypto_influencer.config.search_agent_constants import (
 from src.agentic_crypto_influencer.tools.google_grounding_tool import GoogleGroundingTool
 
 
-class SearchAgent(AssistantAgent):  # type: ignore[misc]
+class SearchAgent(AssistantAgent):
     def __init__(self, model_client: OpenAIChatCompletionClient):
         super().__init__(
             name=SEARCH_AGENT_NAME,

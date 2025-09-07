@@ -1,4 +1,4 @@
-from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.agents import AssistantAgent  # type: ignore[import]
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from src.agentic_crypto_influencer.config.publish_agent_constants import (
@@ -8,7 +8,7 @@ from src.agentic_crypto_influencer.config.publish_agent_constants import (
 from src.agentic_crypto_influencer.tools.x import X
 
 
-class PublishAgent(AssistantAgent):  # type: ignore[misc]
+class PublishAgent(AssistantAgent):
     def __init__(self, model_client: OpenAIChatCompletionClient):
         super().__init__(
             name=PUBLISH_AGENT_NAME,

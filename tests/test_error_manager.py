@@ -14,13 +14,13 @@ from src.agentic_crypto_influencer.error_management.exceptions import (
 )
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def error_manager() -> ErrorManager:
     """ErrorManager instance for testing."""
     return ErrorManager()
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error(error_manager: ErrorManager) -> None:
     """Test error handling with ValueError."""
     with patch(
@@ -43,7 +43,7 @@ def test_handle_error(error_manager: ErrorManager) -> None:
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_different_exception(error_manager: ErrorManager) -> None:
     """Test error handling with RuntimeError."""
     with patch(
@@ -66,7 +66,7 @@ def test_handle_error_with_different_exception(error_manager: ErrorManager) -> N
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_custom_exception(error_manager: ErrorManager) -> None:
     """Test error handling with ConnectionError."""
     with patch(
@@ -89,7 +89,7 @@ def test_handle_error_with_custom_exception(error_manager: ErrorManager) -> None
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_exception_chaining(error_manager: ErrorManager) -> None:
     """Test error handling with chained exceptions."""
     with patch(
@@ -115,7 +115,7 @@ def test_handle_error_with_exception_chaining(error_manager: ErrorManager) -> No
             assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_empty_message(error_manager: ErrorManager) -> None:
     """Test error handling with empty exception message."""
     with patch(
@@ -138,7 +138,7 @@ def test_handle_error_with_empty_message(error_manager: ErrorManager) -> None:
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_none_exception(error_manager: ErrorManager) -> None:
     """Test error handling with None as exception (edge case)."""
     with patch(
@@ -161,7 +161,7 @@ def test_handle_error_with_none_exception(error_manager: ErrorManager) -> None:
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_main_function() -> None:
     """Test the main function that demonstrates error handling."""
     with patch(
@@ -189,7 +189,7 @@ def test_main_function() -> None:
 
 
 # Additional comprehensive tests for error manager specific methods
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_configuration_error(error_manager: ErrorManager) -> None:
     """Test handling of ConfigurationError."""
     with patch(
@@ -216,7 +216,7 @@ def test_handle_configuration_error(error_manager: ErrorManager) -> None:
         assert result == f"Configuration error: {context}. Please check your settings."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_validation_error(error_manager: ErrorManager) -> None:
     """Test handling of ValidationError."""
     with patch(
@@ -242,7 +242,7 @@ def test_handle_validation_error(error_manager: ErrorManager) -> None:
         assert result == "Invalid email. Please check your input and try again."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_api_error_connection(error_manager: ErrorManager) -> None:
     """Test handling of API connection errors."""
     with patch(
@@ -272,7 +272,7 @@ def test_handle_api_error_connection(error_manager: ErrorManager) -> None:
         assert result == "Service temporarily unavailable (twitter). Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_api_error_timeout(error_manager: ErrorManager) -> None:
     """Test handling of API timeout errors."""
     with patch(
@@ -302,7 +302,7 @@ def test_handle_api_error_timeout(error_manager: ErrorManager) -> None:
         assert result == "Service temporarily unavailable (twitter). Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_error_with_context(error_manager: ErrorManager) -> None:
     """Test error handling with additional context."""
     with patch(
@@ -328,7 +328,7 @@ def test_handle_error_with_context(error_manager: ErrorManager) -> None:
         assert result == "An unexpected error occurred. Please try again later."
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_handle_unknown_exception_type(error_manager: ErrorManager) -> None:
     """Test handling of unknown exception types."""
     with patch(

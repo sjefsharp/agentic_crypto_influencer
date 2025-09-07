@@ -8,7 +8,7 @@ import pytest
 from src.agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler, main
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def bitvavo_handler() -> BitvavoHandler:
     """BitvavoHandler instance with mocked client for testing."""
     handler = BitvavoHandler()
@@ -19,13 +19,13 @@ def bitvavo_handler() -> BitvavoHandler:
     return handler
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_init(bitvavo_handler: BitvavoHandler) -> None:
     """Test BitvavoHandler initialization."""
     assert bitvavo_handler.client is not None
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_get_market_data_success(bitvavo_handler: BitvavoHandler) -> None:
     """Test successful market data retrieval."""
     expected_data = {"market": "BTC-EUR", "price": "50000"}
@@ -40,7 +40,7 @@ def test_get_market_data_success(bitvavo_handler: BitvavoHandler) -> None:
     assert result == expected_data
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_get_market_data_client_error(bitvavo_handler: BitvavoHandler) -> None:
     """Test market data retrieval with client error."""
     bitvavo_handler.client.tickerPrice.side_effect = Exception("API Error")
@@ -50,7 +50,7 @@ def test_get_market_data_client_error(bitvavo_handler: BitvavoHandler) -> None:
     assert result is None
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_get_market_data_different_market(bitvavo_handler: BitvavoHandler) -> None:
     """Test market data retrieval for different market."""
     expected_data = {"market": "ETH-EUR", "price": "3000"}
@@ -65,7 +65,7 @@ def test_get_market_data_different_market(bitvavo_handler: BitvavoHandler) -> No
     assert result == expected_data
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_main_success() -> None:
     """Test main function with successful market data retrieval."""
     # Mock the BitvavoHandler class
@@ -102,7 +102,7 @@ def test_main_success() -> None:
         )
 
 
-@pytest.mark.unit  # type: ignore[misc]
+@pytest.mark.unit
 def test_main_error() -> None:
     """Test main function with error during market data retrieval."""
     # Mock the BitvavoHandler class

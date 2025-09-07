@@ -4,43 +4,40 @@ Test coverage voor WCAG 2.1 AA compliance en WebSocket functionaliteit.
 """
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 import json
-from pathlib import Path
-import sys
-import time
 from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
 from src.agentic_crypto_influencer.tools.frontend_server import (
-    app,
     broadcast_activity,
     recent_activities,
 )
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+
+@pytest.fixture
+def client() -> Any:
+    """Create a test client."""
+    from src.agentic_crypto_influencer.tools.frontend_server import app
+
+    app.config["TESTING"] = True
+    with app.test_client() as client:
+        yield client
+
+
+@pytest.fixture
+def mock_redis() -> Generator[Any]:
+    """Mock Redis handler."""
+    with patch("src.agentic_crypto_influencer.tools.frontend_server.redis_handler") as mock:
+        mock.get.return_value = None
+        mock.set.return_value = True
+        mock.delete.return_value = True
+        yield mock
 
 
 class TestFrontendServer:
     """Test cases for the modern frontend server with real-time features."""
-
-    @pytest.fixture  # type: ignore[misc]
-    def client(self) -> Generator[Any]:
-        """Create test client."""
-        app.config["TESTING"] = True
-        with app.test_client() as client:
-            yield client
-
-    @pytest.fixture  # type: ignore[misc]
-    def mock_redis(self) -> Generator[Any]:
-        """Mock Redis handler."""
-        with patch("src.agentic_crypto_influencer.tools.frontend_server.redis_handler") as mock:
-            mock.get.return_value = None
-            mock.set.return_value = True
-            mock.delete.return_value = True
-            yield mock
 
     def test_dashboard_renders(self, client: Any) -> None:
         """Test that the main dashboard loads correctly."""
@@ -68,10 +65,10 @@ class TestFrontendServer:
 
     def test_oauth_status_authorized(self, client: Any, mock_redis: Any) -> None:
         """Test OAuth status when authorized."""
-        token_data = {
+        token_data: dict[str, Any] = {
             "access_token": "test_token",
             "token_type": "bearer",
-            "expires_at": time.time() + 3600,
+            "expires_at": datetime.now(UTC).timestamp() + 3600,
         }
         mock_redis.get.return_value = json.dumps(token_data)
 
@@ -284,6 +281,268 @@ class TestFrontendServer:
 
         # Check manifest link
         assert "/static/manifest.json" in html
+
+    @pytest.fixture
+    def mock_scheduler_manager(self) -> Generator[Any]:
+        """Mock scheduler manager for testing scheduler endpoints."""
+        with patch(
+            "src.agentic_crypto_influencer.tools.frontend_server.scheduler_manager"
+        ) as mock:
+            mock.start_graphflow.return_value = {"success": True, "pid": 12345}
+            mock.stop_graphflow.return_value = {"success": True}
+            mock.get_graphflow_status.return_value = {
+                "running": True,
+                "pid": 12345,
+                "start_time": "2023-01-01T10:00:00",
+            }
+            mock.create_scheduled_job.return_value = {"success": True, "job_id": "test_job_123"}
+            mock.get_scheduled_jobs.return_value = []
+            mock.cancel_job.return_value = {"success": True}
+            mock.get_job_history.return_value = []
+            yield mock
+
+    def test_start_graphflow_success(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test successful GraphFlow start via API."""
+        response = client.post("/api/graphflow/start")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "message" in data
+        assert "pid" in data
+        assert data["pid"] == 12345
+        mock_scheduler_manager.start_graphflow.assert_called_once()
+
+    def test_start_graphflow_scheduler_unavailable(self, client: Any) -> None:
+        """Test GraphFlow start when scheduler is unavailable."""
+        with patch("src.agentic_crypto_influencer.tools.frontend_server.scheduler_manager", None):
+            response = client.post("/api/graphflow/start")
+            assert response.status_code == 500
+
+            data = json.loads(response.data)
+            assert "error" in data
+            assert "Scheduler not available" in data["error"]
+
+    def test_start_graphflow_failure(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test GraphFlow start failure."""
+        mock_scheduler_manager.start_graphflow.return_value = {
+            "success": False,
+            "error": "Process already running",
+        }
+
+        response = client.post("/api/graphflow/start")
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Process already running" in data["error"]
+
+    def test_stop_graphflow_success(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test successful GraphFlow stop via API."""
+        response = client.post("/api/graphflow/stop")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "message" in data
+        mock_scheduler_manager.stop_graphflow.assert_called_once()
+
+    def test_stop_graphflow_failure(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test GraphFlow stop failure."""
+        mock_scheduler_manager.stop_graphflow.return_value = {
+            "success": False,
+            "error": "Process not running",
+        }
+
+        response = client.post("/api/graphflow/stop")
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Process not running" in data["error"]
+
+    def test_graphflow_status(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test GraphFlow status check via API."""
+        response = client.get("/api/graphflow/status")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "running" in data
+        assert "pid" in data
+        assert "start_time" in data
+        assert data["running"] is True
+        assert data["pid"] == 12345
+        mock_scheduler_manager.get_graphflow_status.assert_called_once()
+
+    def test_create_scheduled_job_success(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test successful scheduled job creation."""
+        job_data: dict[str, Any] = {
+            "job_type": "single_post",
+            "schedule_type": "once",
+            "schedule_config": {"run_date": "2023-12-01T10:00:00"},
+            "job_name": "Test Job",
+        }
+
+        response = client.post(
+            "/api/jobs/create", data=json.dumps(job_data), content_type="application/json"
+        )
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "message" in data
+        assert "job_id" in data
+        assert data["job_id"] == "test_job_123"
+        mock_scheduler_manager.create_scheduled_job.assert_called_once()
+
+    def test_create_scheduled_job_missing_data(
+        self, client: Any, mock_scheduler_manager: Any
+    ) -> None:
+        """Test scheduled job creation with missing data."""
+        response = client.post("/api/jobs/create")
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "No data provided" in data["error"]
+
+    def test_create_scheduled_job_missing_fields(
+        self, client: Any, mock_scheduler_manager: Any
+    ) -> None:
+        """Test scheduled job creation with missing required fields."""
+        job_data = {"job_name": "Test Job"}  # Missing required fields
+
+        response = client.post(
+            "/api/jobs/create", data=json.dumps(job_data), content_type="application/json"
+        )
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Missing required fields" in data["error"]
+
+    def test_create_scheduled_job_failure(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test scheduled job creation failure."""
+        mock_scheduler_manager.create_scheduled_job.return_value = {
+            "success": False,
+            "error": "Invalid schedule configuration",
+        }
+
+        job_data: dict[str, Any] = {
+            "job_type": "single_post",
+            "schedule_type": "once",
+            "schedule_config": {"invalid": "config"},
+        }
+
+        response = client.post(
+            "/api/jobs/create", data=json.dumps(job_data), content_type="application/json"
+        )
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Invalid schedule configuration" in data["error"]
+
+    def test_list_scheduled_jobs(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test listing scheduled jobs."""
+        mock_jobs: list[dict[str, Any]] = [
+            {
+                "id": "job1",
+                "name": "Test Job 1",
+                "type": "single_post",
+                "schedule_type": "once",
+                "next_run": "2023-12-01T10:00:00",
+            },
+            {
+                "id": "job2",
+                "name": "Test Job 2",
+                "type": "graphflow",
+                "schedule_type": "interval",
+                "next_run": None,
+            },
+        ]
+        mock_scheduler_manager.get_scheduled_jobs.return_value = mock_jobs
+
+        response = client.get("/api/jobs/list")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "jobs" in data
+        assert len(data["jobs"]) == 2
+        assert data["jobs"][0]["id"] == "job1"
+        assert data["jobs"][1]["id"] == "job2"
+        mock_scheduler_manager.get_scheduled_jobs.assert_called_once()
+
+    def test_cancel_scheduled_job_success(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test successful job cancellation."""
+        response = client.delete("/api/jobs/cancel/test_job_123")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "message" in data
+        mock_scheduler_manager.cancel_job.assert_called_once_with("test_job_123")
+
+    def test_cancel_scheduled_job_failure(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test job cancellation failure."""
+        mock_scheduler_manager.cancel_job.return_value = {
+            "success": False,
+            "error": "Job not found",
+        }
+
+        response = client.delete("/api/jobs/cancel/nonexistent_job")
+        assert response.status_code == 400
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Job not found" in data["error"]
+
+    def test_get_job_history(self, client: Any, mock_scheduler_manager: Any) -> None:
+        """Test retrieving job execution history."""
+        mock_history = [
+            {
+                "timestamp": "2023-01-01T10:00:00",
+                "job_id": "job1",
+                "job_name": "Test Job",
+                "status": "completed",
+                "message": "Success",
+            }
+        ]
+        mock_scheduler_manager.get_job_history.return_value = mock_history
+
+        response = client.get("/api/jobs/history")
+        assert response.status_code == 200
+
+        data = json.loads(response.data)
+        assert "history" in data
+        assert len(data["history"]) == 1
+        assert data["history"][0]["job_id"] == "job1"
+        assert data["history"][0]["status"] == "completed"
+        mock_scheduler_manager.get_job_history.assert_called_once()
+
+    def test_scheduler_endpoints_exception_handling(
+        self, client: Any, mock_scheduler_manager: Any
+    ) -> None:
+        """Test that scheduler endpoints handle exceptions gracefully."""
+        mock_scheduler_manager.start_graphflow.side_effect = Exception("Test exception")
+
+        response = client.post("/api/graphflow/start")
+        assert response.status_code == 500
+
+        data = json.loads(response.data)
+        assert "error" in data
+        assert "Test exception" in data["error"]
+
+    def test_scheduler_endpoints_exist(self, client: Any) -> None:
+        """Test that scheduler endpoints exist (even if scheduler is unavailable)."""
+        # These should return 500 if scheduler is not available, not 404
+        endpoints = [
+            ("/api/graphflow/status", "GET"),
+            ("/api/jobs/list", "GET"),
+            ("/api/jobs/history", "GET"),
+        ]
+
+        for endpoint, method in endpoints:
+            response = client.post(endpoint) if method == "POST" else client.get(endpoint)
+
+            # Should not be 404 (not found), might be 500 (server error) if scheduler unavailable
+            assert response.status_code != 404
 
 
 if __name__ == "__main__":

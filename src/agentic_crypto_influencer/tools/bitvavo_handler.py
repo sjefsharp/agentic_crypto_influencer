@@ -1,6 +1,6 @@
 from typing import Any
 
-from python_bitvavo_api.bitvavo import Bitvavo  # type: ignore[import-untyped]
+from python_bitvavo_api.bitvavo import Bitvavo
 
 from src.agentic_crypto_influencer.config.app_constants import TOOL_NAME_BITVAVO
 from src.agentic_crypto_influencer.config.error_constants import (
@@ -47,7 +47,7 @@ class BitvavoHandler(LoggerMixin):
 
         self.logger.debug(f"Fetching market data for {market}")
         try:
-            response: dict[str, Any] | None = self.client.tickerPrice({"market": market})  # type: ignore[no-untyped-call]
+            response: dict[str, Any] | None = self.client.tickerPrice({"market": market})
             self.logger.info(f"Successfully fetched market data for {market}")
             return response
         except Exception as e:

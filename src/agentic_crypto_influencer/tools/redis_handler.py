@@ -45,7 +45,7 @@ class RedisHandler:
     def get(self, key: str) -> bytes | None:
         self._ensure_connected()
         try:
-            return self.redis_client.get(key)  # type: ignore
+            return self.redis_client.get(key)  # type: ignore[union-attr]
         except Exception as e:
             logging.error(ERROR_REDIS_GET_KEY, key, str(e))
             raise RuntimeError(ERROR_REDIS_KEY_RETRIEVAL % (key, e)) from e
@@ -53,7 +53,7 @@ class RedisHandler:
     def set(self, key: str, value: Any, ex: int | None = None) -> None:
         self._ensure_connected()
         try:
-            self.redis_client.set(key, value, ex=ex)  # type: ignore
+            self.redis_client.set(key, value, ex=ex)  # type: ignore[union-attr]
         except Exception as e:
             logging.error(ERROR_REDIS_SET_KEY, key, str(e))
             raise RuntimeError(ERROR_REDIS_KEY_SET % (key, e)) from e
@@ -62,7 +62,7 @@ class RedisHandler:
         """Delete a key from Redis."""
         self._ensure_connected()
         try:
-            result = self.redis_client.delete(key)  # type: ignore
+            result = self.redis_client.delete(key)  # type: ignore[union-attr]
             return bool(result)
         except Exception as e:
             logging.error("Failed to delete key '%s' from Redis: %s", key, str(e))
@@ -72,7 +72,7 @@ class RedisHandler:
         """Test Redis connection with ping."""
         self._ensure_connected()
         try:
-            result = self.redis_client.ping()  # type: ignore
+            result = self.redis_client.ping()  # type: ignore[union-attr]
             return bool(result)
         except Exception as e:
             logging.error("Redis ping failed: %s", str(e))

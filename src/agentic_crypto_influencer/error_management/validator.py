@@ -430,7 +430,7 @@ class Validator:
                 raise ValidationError(
                     f"{field_name} is missing required keys: {', '.join(missing_keys)}",
                     field=field_name,
-                    value=list(value.keys()),  # type: ignore[arg-type]
+                    value=list(value.keys()),
                     context={
                         "validation_type": "missing_keys",
                         "missing_keys": missing_keys,
@@ -438,7 +438,7 @@ class Validator:
                     },
                 )
 
-        return value  # type: ignore[return-value]
+        return value
 
 
 # Convenience function for validating API keys

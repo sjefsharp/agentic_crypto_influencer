@@ -83,7 +83,7 @@ class OAuthHandler:
         )
 
         # Generate authorization URL with PKCE parameters (S256 method as per X API v2 docs)
-        authorization_url, state = oauth.authorization_url(  # type: ignore[no-untyped-call]
+        authorization_url, state = oauth.authorization_url(
             X_AUTHORIZE_URL,
             code_challenge=code_challenge,
             code_challenge_method=OAUTH_CODE_CHALLENGE_METHOD,
@@ -94,7 +94,7 @@ class OAuthHandler:
 
         print(SUCCESS_URL_GENERATED)
         print(SUCCESS_PLEASE_AUTHORIZE % authorization_url)
-        return authorization_url
+        return str(authorization_url)
 
     def exchange_code_for_tokens(self, code: str) -> dict[str, Any]:
         code_verifier = self.redis_handler.get(REDIS_KEY_OAUTH_CODE_VERIFIER)
@@ -104,7 +104,7 @@ class OAuthHandler:
         oauth = OAuth2Session(
             client_id=self.client_id, redirect_uri=self.redirect_uri, scope=self.scopes
         )
-        token = oauth.fetch_token(  # type: ignore[no-untyped-call]
+        token = oauth.fetch_token(
             token_url=self.token_url,
             client_secret=self.client_secret,
             code_verifier=code_verifier.decode("utf-8")
@@ -131,7 +131,7 @@ class OAuthHandler:
         )
 
         # Twitter OAuth2 refresh - requires Basic auth header
-        new_token = oauth.refresh_token(  # type: ignore[no-untyped-call]
+        new_token = oauth.refresh_token(
             token_url=self.token_url,
             refresh_token=token.get("refresh_token", ""),
             client_id=self.client_id,
