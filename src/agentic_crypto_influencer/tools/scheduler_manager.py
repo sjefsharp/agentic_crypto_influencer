@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import subprocess  # nosec B404
+from subprocess import TimeoutExpired
 import sys
 import threading
 from typing import Any
@@ -119,6 +120,7 @@ class SchedulerManager:
                 logger.info("Scheduler stopped successfully")
         except Exception as e:
             logger.error(f"Failed to stop scheduler: {e}")
+            raise
 
     def create_scheduled_job(
         self,
@@ -341,7 +343,7 @@ class SchedulerManager:
                 # Wait for graceful shutdown
                 try:
                     self.graphflow_process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
+                except TimeoutExpired:
                     # Force kill if needed
                     self.graphflow_process.kill()
                     self.graphflow_process.wait()
@@ -396,7 +398,10 @@ class SchedulerManager:
 
         try:
             # Wait for process to complete
-            _, stderr = self.graphflow_process.communicate(timeout=GRAPHFLOW_TIMEOUT_SECONDS)
+            result = self.graphflow_process.communicate(timeout=GRAPHFLOW_TIMEOUT_SECONDS)
+            stdout, stderr = (
+                result if isinstance(result, tuple) and len(result) == 2 else (None, None)
+            )
 
             # Process completed
             if self.graphflow_process.returncode == 0:
@@ -410,7 +415,7 @@ class SchedulerManager:
                     logger.error(f"GraphFlow stderr: {stderr.decode()}")
                 self.redis_handler.set(REDIS_KEY_GRAPHFLOW_STATUS, GRAPHFLOW_STATUS_ERROR)
 
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             logger.warning("GraphFlow process timeout, terminating")
             self.graphflow_process.terminate()
             self.redis_handler.set(REDIS_KEY_GRAPHFLOW_STATUS, GRAPHFLOW_STATUS_ERROR)

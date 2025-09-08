@@ -12,6 +12,14 @@ repos:
             types-flask==1.1.6.*,
             autogen-ext==0.7.4.*,
           ]
+        args:
+          [
+            "--ignore-missing-imports",
+            "--strict",
+            "--no-warn-unused-ignores",
+            "--namespace-packages",
+          ]
+        files: ^src/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.10
     hooks:

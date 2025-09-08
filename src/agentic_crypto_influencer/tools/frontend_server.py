@@ -18,7 +18,6 @@ from typing import Any
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO, emit
 import requests
-import json
 
 from src.agentic_crypto_influencer.tools.scheduler_manager import SchedulerManager
 
@@ -344,8 +343,8 @@ if socketio_available:
     @socketio.on("connect", namespace="/stream")  # type: ignore[misc]
     def handle_connect() -> None:
         """Handle new WebSocket connection."""
-        logger.info(f"Client connected: {request.sid}")
-        connected_clients.add(request.sid)
+        logger.info(f"Client connected: {request.sid}")  # type: ignore[attr-defined]
+        connected_clients.add(request.sid)  # type: ignore[attr-defined]
 
         # Send recent activities to new client
         with stream_lock:
@@ -355,12 +354,12 @@ if socketio_available:
     @socketio.on("disconnect", namespace="/stream")  # type: ignore[misc]
     def handle_disconnect() -> None:
         """Handle WebSocket disconnection."""
-        logger.info(f"Client disconnected: {request.sid}")
-        connected_clients.discard(request.sid)
+        logger.info(f"Client disconnected: {request.sid}")  # type: ignore[attr-defined]
+        connected_clients.discard(request.sid)  # type: ignore[attr-defined]
 
 
 @app.route("/api/jobs/create", methods=["POST"])  # type: ignore[misc]
-def create_scheduled_job() -> dict[str, Any]:
+def create_scheduled_job() -> dict[str, Any] | tuple[Any, int]:
     """Create a scheduled job."""
     try:
         # Get JSON data from request
@@ -376,7 +375,9 @@ def create_scheduled_job() -> dict[str, Any]:
             # Convert schedule_config to schedule_value for backward compatibility
             data["schedule_value"] = json.dumps(data["schedule_config"])
         elif "schedule_value" not in data and "schedule_config" not in data:
-            return jsonify({"error": "Missing required fields: schedule_value or schedule_config"}), 400  # type: ignore[no-any-return]
+            return jsonify(
+                {"error": "Missing required fields: schedule_value or schedule_config"}
+            ), 400  # type: ignore[no-any-return]
 
         required_fields = ["job_type", "schedule_type", "schedule_value"]
         missing_fields = [field for field in required_fields if field not in data]
@@ -402,10 +403,12 @@ def create_scheduled_job() -> dict[str, Any]:
         )
 
         if result.get("success", False):
-            return jsonify({  # type: ignore[no-any-return]
-                "message": "Job created successfully",
-                "job_id": result.get("job_id", "unknown")
-            })
+            return jsonify(  # type: ignore[no-any-return]
+                {
+                    "message": "Job created successfully",
+                    "job_id": result.get("job_id", "unknown"),
+                }
+            )
         else:
             return jsonify({"error": result.get("error", "Failed to create job")}), 400  # type: ignore[no-any-return]
 
@@ -415,7 +418,7 @@ def create_scheduled_job() -> dict[str, Any]:
 
 
 @app.route("/api/jobs/list", methods=["GET"])  # type: ignore[misc]
-def list_scheduled_jobs() -> dict[str, Any]:
+def list_scheduled_jobs() -> dict[str, Any] | tuple[Any, int]:
     """List all scheduled jobs."""
     try:
         jobs = scheduler_manager.get_scheduled_jobs()
@@ -426,7 +429,7 @@ def list_scheduled_jobs() -> dict[str, Any]:
 
 
 @app.route("/api/jobs/cancel/<job_id>", methods=["DELETE"])  # type: ignore[misc]
-def cancel_scheduled_job(job_id: str) -> dict[str, Any]:
+def cancel_scheduled_job(job_id: str) -> dict[str, Any] | tuple[Any, int]:
     """Cancel a scheduled job."""
     try:
         result = scheduler_manager.cancel_job(job_id)
@@ -440,7 +443,7 @@ def cancel_scheduled_job(job_id: str) -> dict[str, Any]:
 
 
 @app.route("/api/jobs/history", methods=["GET"])  # type: ignore[misc]
-def get_job_history() -> dict[str, Any]:
+def get_job_history() -> dict[str, Any] | tuple[Any, int]:
     """Get job execution history."""
     try:
         history = scheduler_manager.get_job_history()
@@ -451,7 +454,7 @@ def get_job_history() -> dict[str, Any]:
 
 
 @app.route("/api/graphflow/start", methods=["POST"])  # type: ignore[misc]
-def start_graphflow() -> dict[str, Any]:
+def start_graphflow() -> dict[str, Any] | tuple[Any, int]:
     """Start GraphFlow process."""
     try:
         if scheduler_manager is None:  # type: ignore[comparison-overlap]
@@ -459,10 +462,12 @@ def start_graphflow() -> dict[str, Any]:
 
         result = scheduler_manager.start_graphflow()
         if result.get("success", False):
-            return jsonify({
-                "message": result.get("message", "GraphFlow started successfully"),
-                "pid": result.get("pid")
-            })  # type: ignore[no-any-return]
+            return jsonify(  # type: ignore[no-any-return]
+                {
+                    "message": result.get("message", "GraphFlow started successfully"),
+                    "pid": result.get("pid"),
+                }
+            )
         else:
             return jsonify({"error": result.get("error", "Failed to start GraphFlow")}), 400  # type: ignore[no-any-return]
     except Exception as e:
@@ -471,7 +476,7 @@ def start_graphflow() -> dict[str, Any]:
 
 
 @app.route("/api/graphflow/stop", methods=["POST"])  # type: ignore[misc]
-def stop_graphflow() -> dict[str, Any]:
+def stop_graphflow() -> dict[str, Any] | tuple[Any, int]:
     """Stop GraphFlow process."""
     try:
         result = scheduler_manager.stop_graphflow()
@@ -485,7 +490,7 @@ def stop_graphflow() -> dict[str, Any]:
 
 
 @app.route("/api/graphflow/status", methods=["GET"])  # type: ignore[misc]
-def get_graphflow_status() -> dict[str, Any]:
+def get_graphflow_status() -> dict[str, Any] | tuple[Any, int]:
     """Get GraphFlow status."""
     try:
         status = scheduler_manager.get_graphflow_status()
@@ -493,7 +498,7 @@ def get_graphflow_status() -> dict[str, Any]:
         response_data = {
             "running": status.get("is_running", status.get("running", False)),
             "pid": status.get("pid"),
-            "status": status.get("status", "unknown")
+            "status": status.get("status", "unknown"),
         }
 
         # Add start_time if available (for compatibility with tests)
@@ -507,7 +512,7 @@ def get_graphflow_status() -> dict[str, Any]:
 
 
 @app.route("/api/stream/activities")  # type: ignore[misc]
-def get_recent_activities() -> dict[str, Any]:
+def get_recent_activities() -> dict[str, Any] | tuple[Any, int]:
     """Fallback API endpoint for recent activities (polling)."""
     with stream_lock:
         return jsonify(  # type: ignore[no-any-return]

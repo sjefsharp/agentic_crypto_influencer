@@ -8,7 +8,7 @@ from src.agentic_crypto_influencer.config.search_agent_constants import (
 from src.agentic_crypto_influencer.tools.google_grounding_tool import GoogleGroundingTool
 
 
-class SearchAgent(AssistantAgent):
+class SearchAgent(AssistantAgent):  # type: ignore[misc]
     def __init__(self, model_client: OpenAIChatCompletionClient):
         super().__init__(
             name=SEARCH_AGENT_NAME,

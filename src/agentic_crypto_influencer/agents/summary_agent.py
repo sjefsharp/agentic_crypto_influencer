@@ -9,7 +9,7 @@ from src.agentic_crypto_influencer.tools.bitvavo_handler import BitvavoHandler
 from src.agentic_crypto_influencer.tools.validator import LengthValidator
 
 
-class SummaryAgent(AssistantAgent):
+class SummaryAgent(AssistantAgent):  # type: ignore[misc]
     def __init__(self, model_client: OpenAIChatCompletionClient):
         super().__init__(
             name=SUMMARY_AGENT_NAME,

@@ -22,7 +22,7 @@ from src.agentic_crypto_influencer.error_management.retry import (
 class TestCircuitBreaker:
     """Test cases for CircuitBreaker class."""
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_init(self) -> None:
         """Test circuit breaker initialization."""
         cb = CircuitBreaker(
@@ -40,7 +40,7 @@ class TestCircuitBreaker:
         assert cb.failure_count == 0
         assert cb.success_count == 0
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_successful_call(self) -> None:
         """Test successful call through circuit breaker."""
         cb = CircuitBreaker()
@@ -53,7 +53,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.CLOSED
         assert cb.failure_count == 0
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_failure_below_threshold(self) -> None:
         """Test failure below threshold keeps circuit closed."""
         cb = CircuitBreaker(failure_threshold=3)
@@ -75,7 +75,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.CLOSED
         assert cb.failure_count == 2
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_opens_after_threshold(self) -> None:
         """Test circuit breaker opens after failure threshold."""
         cb = CircuitBreaker(failure_threshold=2)
@@ -94,7 +94,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.OPEN
         assert cb.failure_count == 2
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_rejects_when_open(self) -> None:
         """Test circuit breaker rejects calls when open."""
         cb = CircuitBreaker(failure_threshold=1, reset_timeout=60.0)
@@ -117,7 +117,7 @@ class TestCircuitBreaker:
 
         assert "Circuit breaker is open" in str(exc_info.value)
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_half_open_transition(self) -> None:
         """Test transition to half-open state after timeout."""
         cb = CircuitBreaker(failure_threshold=1, reset_timeout=0.1)
@@ -142,7 +142,7 @@ class TestCircuitBreaker:
         assert result == "success"
         assert cb.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_closes_after_success_threshold(self) -> None:
         """Test circuit breaker closes after success threshold in half-open."""
         cb = CircuitBreaker(failure_threshold=1, reset_timeout=0.1, success_threshold=2)
@@ -169,7 +169,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.CLOSED  # type: ignore[comparison-overlap]
         assert cb.success_count == 0
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_circuit_breaker_reopens_on_half_open_failure(self) -> None:
         """Test circuit breaker reopens on failure in half-open state."""
         cb = CircuitBreaker(failure_threshold=1, reset_timeout=0.1)
@@ -193,7 +193,7 @@ class TestCircuitBreaker:
 class TestRetryDecorator:
     """Test cases for retry decorator."""
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_successful_first_attempt(self) -> None:
         """Test retry decorator with successful first attempt."""
 
@@ -204,7 +204,7 @@ class TestRetryDecorator:
         result = success_func()
         assert result == "success"
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_success_after_failures(self) -> None:
         """Test retry decorator succeeds after initial failures."""
         call_count = 0
@@ -221,7 +221,7 @@ class TestRetryDecorator:
         assert result == "success"
         assert call_count == 3
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_exhausts_attempts(self) -> None:
         """Test retry decorator exhausts all attempts."""
 
@@ -232,7 +232,7 @@ class TestRetryDecorator:
         with pytest.raises(APIConnectionError):
             always_fails()
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_non_retryable_error(self) -> None:
         """Test retry decorator doesn't retry non-retryable errors."""
         call_count = 0
@@ -249,7 +249,7 @@ class TestRetryDecorator:
         # Should only be called once (not retried)
         assert call_count == 1
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_specific_exceptions(self) -> None:
         """Test retry decorator with specific exception types."""
 
@@ -261,7 +261,7 @@ class TestRetryDecorator:
         with pytest.raises(APIConnectionError):
             mixed_errors()
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_with_callback(self) -> None:
         """Test retry decorator with on_retry callback."""
         retry_calls: list[tuple[str, int]] = []
@@ -281,7 +281,7 @@ class TestRetryDecorator:
         assert retry_calls[0] == ("APIConnectionError", 1)
         assert retry_calls[1] == ("APIConnectionError", 2)
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_backoff_delay(self) -> None:
         """Test retry decorator applies backoff delay."""
         start_time = datetime.now(UTC).timestamp()
@@ -301,7 +301,7 @@ class TestRetryDecorator:
 class TestAsyncRetry:
     """Test cases for async retry decorator."""
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_async_retry_import(self) -> None:
         """Test that async_retry can be imported."""
         from src.agentic_crypto_influencer.error_management.retry import async_retry
@@ -312,7 +312,7 @@ class TestAsyncRetry:
 class TestRetryManager:
     """Test cases for retry manager."""
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_manager_get_circuit_breaker(self) -> None:
         """Test retry manager creates and reuses circuit breakers."""
         cb1 = retry_manager.get_circuit_breaker("test_service")
@@ -322,7 +322,7 @@ class TestRetryManager:
         assert cb1 is cb2
         assert cb1.service_name == "test_service"
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_manager_different_services(self) -> None:
         """Test retry manager creates different circuit breakers for different services."""
         cb1 = retry_manager.get_circuit_breaker("service1")
@@ -333,7 +333,7 @@ class TestRetryManager:
         assert cb1.service_name == "service1"
         assert cb2.service_name == "service2"
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_manager_execute_with_circuit_breaker(self) -> None:
         """Test retry manager executes function with circuit breaker."""
 
@@ -344,7 +344,7 @@ class TestRetryManager:
         result = retry_manager.call_with_circuit_breaker("unique_test_service", test_func)
         assert result == "success"
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_manager_reset_circuit_breaker(self) -> None:
         """Test retry manager can reset circuit breaker."""
         # Get a circuit breaker and modify its state
@@ -359,7 +359,7 @@ class TestRetryManager:
         assert cb_new.failure_count == 0
         assert cb_new.state == CircuitState.CLOSED
 
-    @pytest.mark.unit
+    @pytest.mark.unit  # type: ignore[misc]
     def test_retry_manager_get_service_status(self) -> None:
         """Test retry manager returns service status."""
         cb = retry_manager.get_circuit_breaker("test_service")
