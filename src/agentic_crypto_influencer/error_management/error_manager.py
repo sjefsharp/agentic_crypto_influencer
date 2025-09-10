@@ -275,7 +275,8 @@ class ErrorManager(LoggerMixin):
 
     def get_circuit_breaker_status(self) -> dict[str, dict[str, Any]]:
         """Get status of all circuit breakers."""
-        return retry_manager.get_service_status()
+        service_status = retry_manager.get_service_status()
+        return {"circuit_breakers": service_status}
 
     def call_with_circuit_breaker(
         self,
@@ -308,7 +309,9 @@ class ErrorManager(LoggerMixin):
                 "function": func.__name__ if hasattr(func, "__name__") else str(func),
                 "circuit_breaker_status": retry_manager.get_service_status().get(service, {}),
             }
-            return self.handle_error(e, context)
+            self.handle_error(e, context)
+            # Re-raise the original exception for proper error propagation
+            raise
 
 
 def main() -> None:
