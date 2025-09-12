@@ -126,6 +126,10 @@ class TestCallbackServer(unittest.TestCase):
                 "src.agentic_crypto_influencer.tools.callback_server.X_REDIRECT_URI",
                 "http://localhost:5000/callback",
             ),
+            patch(
+                "src.agentic_crypto_influencer.tools.oauth_handler.get_authorization_url",
+                return_value="https://twitter.com/i/oauth2/authorize?test=params",
+            ),
         ):
             response = self.app.get("/")
             assert response.status_code == 200
