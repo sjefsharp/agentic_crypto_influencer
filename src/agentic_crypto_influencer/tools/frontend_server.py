@@ -11,13 +11,16 @@ import json
 import os
 from pathlib import Path
 import sys
+import threading
 from threading import Lock
 import time
 from typing import Any
 
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, url_for
+from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import requests
+from werkzeug.wrappers import Response
 
 from src.agentic_crypto_influencer.tools.scheduler_manager import SchedulerManager
 
@@ -40,8 +43,6 @@ from src.agentic_crypto_influencer.config.frontend_constants import (  # noqa: E
     LOG_SOCKETIO_FALLBACK,
     LOG_SOCKETIO_INITIALIZED,
     MAX_RECENT_ACTIVITIES,
-    OAUTH_NO_CODE_MESSAGE,
-    OAUTH_SUCCESS_HTML,
     OAUTH_SUCCESS_MESSAGE,
     PORT_ENV_VAR,
     ROUTE_OAUTH_STATUS,
@@ -77,6 +78,10 @@ logger = get_logger(__name__)
 
 # Initialize Flask app with SocketIO for real-time features
 app = Flask(__name__, template_folder=FLASK_TEMPLATE_FOLDER, static_folder=FLASK_STATIC_FOLDER)
+
+# Enable CORS for Safari and cross-origin requests
+CORS(app, origins=["http://localhost:5000", "http://127.0.0.1:5000"], supports_credentials=True)
+
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", FLASK_SECRET_KEY_DEFAULT)
 
 # Initialize SocketIO with threading for production compatibility
@@ -109,6 +114,22 @@ redis_handler = RedisHandler(lazy_connect=True)
 @app.route("/")  # type: ignore
 def dashboard() -> str:
     """Main dashboard with OAuth status and live agent stream."""
+    # Check for OAuth status messages from URL parameters
+    oauth_success = request.args.get("oauth_success")
+    oauth_error = request.args.get("oauth_error")
+
+    # Broadcast status messages to all connected clients
+    if oauth_success:
+        broadcast_activity("OAuth", "✅ OAuth autorisatie succesvol voltooid!", "success")
+    elif oauth_error:
+        error_messages = {
+            "no_code": "❌ Geen autorisatiecode ontvangen",
+            "token_exchange_failed": "❌ Token uitwisseling mislukt",
+            "callback_exception": "❌ Fout tijdens callback verwerking",
+        }
+        message = error_messages.get(oauth_error, f"❌ OAuth fout: {oauth_error}")
+        broadcast_activity("OAuth", message, "error")
+
     return render_template(TEMPLATE_DASHBOARD)  # type: ignore
 
 
@@ -183,6 +204,29 @@ def get_oauth_url() -> tuple[dict[str, Any], int] | dict[str, Any]:
         ), 500
 
 
+@app.route("/oauth/authorize")  # type: ignore[misc]
+def oauth_authorize_redirect() -> Response:
+    """Redirect to OAuth authorization URL - Safari friendly without popup."""
+    try:
+        from src.agentic_crypto_influencer.tools.oauth_handler import OAuthHandler
+
+        oauth_handler = OAuthHandler()
+
+        # Generate authorization URL with PKCE
+        auth_url = oauth_handler.get_authorization_url()  # type: ignore
+
+        logger.info("Redirecting to OAuth URL for authorization")
+        broadcast_activity("OAuth", "🔄 Doorverwijzen naar X/Twitter autorisatie", "info")
+
+        # Redirect directly to OAuth URL
+        return redirect(auth_url)
+
+    except Exception as e:
+        logger.error(f"Error in OAuth redirect: {e}")
+        broadcast_activity("OAuth", f"❌ Fout bij autorisatie redirect: {e!s}", "error")
+        return redirect(url_for("dashboard"))
+
+
 @app.route("/api/system/redis")  # type: ignore[misc]
 def redis_status() -> tuple[dict[str, Any], int] | dict[str, Any]:
     """Check Redis connection status."""
@@ -211,7 +255,7 @@ def redis_status() -> tuple[dict[str, Any], int] | dict[str, Any]:
 
 
 @app.route("/callback")  # type: ignore[misc]
-def callback() -> tuple[str, int] | str:
+def callback() -> Response:
     """
     OAuth2 callback handler met improved error handling en logging.
     Gebruikt OAuth2Session voor proper token exchange met PKCE support.
@@ -228,27 +272,31 @@ def callback() -> tuple[str, int] | str:
 
         if error:
             logger.error(f"OAuth error in callback: {error}")
-            return f"❌ OAuth Error: {error}", 400
+            broadcast_activity("OAuth", f"❌ OAuth Error: {error}", "error")
+            return redirect(url_for("dashboard", oauth_error=error))
 
         if not code:
             logger.error("No authorization code received in callback")
-            return OAUTH_NO_CODE_MESSAGE, 400
+            broadcast_activity("OAuth", "❌ Geen autorisatiecode ontvangen", "error")
+            return redirect(url_for("dashboard", oauth_error="no_code"))
 
         # Exchange code for tokens
+        broadcast_activity("OAuth", "🔄 Token uitwisseling wordt uitgevoerd...", "info")
         success = get_and_save_tokens(code)
 
         if success:
             # Broadcast success to connected clients
             broadcast_activity(ACTIVITY_TYPE_OAUTH, OAUTH_SUCCESS_MESSAGE, ACTIVITY_STATUS_SUCCESS)
-            return OAUTH_SUCCESS_HTML
+            # Redirect back to homepage with success indicator
+            return redirect(url_for("dashboard", oauth_success="true"))
         else:
             broadcast_activity("OAuth", "❌ Token exchange mislukt", "error")
-            return "❌ Token uitwisseling mislukt", 500
+            return redirect(url_for("dashboard", oauth_error="token_exchange_failed"))
 
     except Exception as e:
         logger.error(f"Callback error: {e}")
         broadcast_activity("OAuth", f"❌ Callback error: {e!s}", "error")
-        return f"❌ Callback fout: {e}", 500
+        return redirect(url_for("dashboard", oauth_error="callback_exception"))
 
 
 def get_and_save_tokens(code: str) -> bool:
@@ -316,7 +364,7 @@ def get_and_save_tokens(code: str) -> bool:
 
 
 def broadcast_activity(agent: str, message: str, activity_type: str = "info") -> None:
-    """Broadcast agent activity to connected clients."""
+    """Broadcast agent activity to connected clients with enhanced logging."""
     activity = {
         "timestamp": datetime.now().isoformat(),
         "agent": agent,
@@ -330,12 +378,74 @@ def broadcast_activity(agent: str, message: str, activity_type: str = "info") ->
         if len(recent_activities) > MAX_RECENT_ACTIVITIES:
             recent_activities.pop(0)
 
+    # Enhanced logging
+    log_message = f"[{agent}] {message} ({activity_type})"
+    if activity_type == "error":
+        logger.error(log_message)
+    elif activity_type == "warning":
+        logger.warning(log_message)
+    elif activity_type == "success":
+        logger.info(f"✅ {log_message}")
+    else:
+        logger.info(log_message)
+
     # Broadcast to WebSocket clients if available
     if socketio_available:
         try:
             socketio.emit("agent_activity", activity, namespace="/stream")
+            logger.debug(f"WebSocket broadcast sent: {agent} - {message}")
         except Exception as e:
             logger.warning(f"WebSocket broadcast failed: {e}")
+    else:
+        logger.debug("WebSocket not available, activity stored for polling")
+
+
+def check_graphflow_activity() -> None:
+    """Check Redis for GraphFlow activities and broadcast them."""
+    try:
+        graphflow_activity_data = redis_handler.get("graphflow_activity")
+        if graphflow_activity_data:
+            activity = json.loads(graphflow_activity_data)
+
+            # Broadcast the activity to connected clients
+            if socketio_available:
+                try:
+                    socketio.emit("agent_activity", activity, namespace="/stream")
+                    logger.debug(f"GraphFlow activity forwarded: {activity['message']}")
+
+                    # Add to recent activities
+                    with stream_lock:
+                        recent_activities.append(activity)
+                        if len(recent_activities) > MAX_RECENT_ACTIVITIES:
+                            recent_activities.pop(0)
+
+                    # Clear the activity from Redis to prevent duplication
+                    redis_handler.delete("graphflow_activity")
+
+                except Exception as e:
+                    logger.warning(f"Failed to forward GraphFlow activity: {e}")
+
+    except Exception as e:
+        logger.debug(f"No GraphFlow activity to forward: {e}")
+
+
+# Start a background task to check for GraphFlow activities
+def graphflow_activity_checker() -> None:
+    """Background thread to check for GraphFlow activities."""
+    while True:
+        try:
+            check_graphflow_activity()
+            time.sleep(2)  # Check every 2 seconds
+        except Exception as e:
+            logger.warning(f"GraphFlow activity checker error: {e}")
+            time.sleep(5)  # Wait longer on error
+
+
+# Start the background checker thread
+if socketio_available:
+    graphflow_thread = threading.Thread(target=graphflow_activity_checker, daemon=True)
+    graphflow_thread.start()
+    logger.info("GraphFlow activity checker started")
 
 
 if socketio_available:
@@ -455,37 +565,72 @@ def get_job_history() -> dict[str, Any] | tuple[Any, int]:
 
 @app.route("/api/graphflow/start", methods=["POST"])  # type: ignore[misc]
 def start_graphflow() -> dict[str, Any] | tuple[Any, int]:
-    """Start GraphFlow process."""
+    """Start GraphFlow process with enhanced logging and error handling."""
     try:
+        logger.info("GraphFlow start requested")
+        broadcast_activity("GraphFlow", "🚀 GraphFlow wordt opgestart...", "info")
+
         if scheduler_manager is None:  # type: ignore[comparison-overlap]
-            return jsonify({"error": "Scheduler not available"}), 500  # type: ignore[no-any-return]
+            error_msg = "Scheduler not available"
+            logger.error(error_msg)
+            broadcast_activity("GraphFlow", f"❌ {error_msg}", "error")
+            return jsonify({"error": error_msg}), 500  # type: ignore[no-any-return]
 
         result = scheduler_manager.start_graphflow()
+
         if result.get("success", False):
+            message = result.get("message", "GraphFlow started successfully")
+            pid = result.get("pid")
+
+            logger.info(f"✅ GraphFlow started successfully - PID: {pid}")
+            broadcast_activity(
+                "GraphFlow", f"✅ {message}" + (f" (PID: {pid})" if pid else ""), "success"
+            )
+
             return jsonify(  # type: ignore[no-any-return]
                 {
-                    "message": result.get("message", "GraphFlow started successfully"),
-                    "pid": result.get("pid"),
+                    "message": message,
+                    "pid": pid,
                 }
             )
         else:
-            return jsonify({"error": result.get("error", "Failed to start GraphFlow")}), 400  # type: ignore[no-any-return]
+            error = result.get("error", "Failed to start GraphFlow")
+            logger.error(f"Failed to start GraphFlow: {error}")
+            broadcast_activity("GraphFlow", f"❌ {error}", "error")
+            return jsonify({"error": error}), 400  # type: ignore[no-any-return]
+
     except Exception as e:
-        logger.error(f"Error starting GraphFlow: {e}")
+        error_msg = f"Error starting GraphFlow: {e}"
+        logger.error(error_msg)
+        broadcast_activity("GraphFlow", f"❌ {error_msg}", "error")
         return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
 
 
 @app.route("/api/graphflow/stop", methods=["POST"])  # type: ignore[misc]
 def stop_graphflow() -> dict[str, Any] | tuple[Any, int]:
-    """Stop GraphFlow process."""
+    """Stop GraphFlow process with enhanced logging and error handling."""
     try:
+        logger.info("GraphFlow stop requested")
+        broadcast_activity("GraphFlow", "⏹️ GraphFlow wordt gestopt...", "info")
+
         result = scheduler_manager.stop_graphflow()
+
         if result.get("success", False):
-            return jsonify({"message": "GraphFlow stopped successfully"})  # type: ignore[no-any-return]
+            message = result.get("message", "GraphFlow stopped successfully")
+            logger.info("✅ GraphFlow stopped successfully")
+            broadcast_activity("GraphFlow", f"✅ {message}", "success")
+
+            return jsonify({"message": message})  # type: ignore[no-any-return]
         else:
-            return jsonify({"error": result.get("error", "Failed to stop GraphFlow")}), 400  # type: ignore[no-any-return]
+            error = result.get("error", "Failed to stop GraphFlow")
+            logger.error(f"Failed to stop GraphFlow: {error}")
+            broadcast_activity("GraphFlow", f"❌ {error}", "error")
+            return jsonify({"error": error}), 400  # type: ignore[no-any-return]
+
     except Exception as e:
-        logger.error(f"Error stopping GraphFlow: {e}")
+        error_msg = f"Error stopping GraphFlow: {e}"
+        logger.error(error_msg)
+        broadcast_activity("GraphFlow", f"❌ {error_msg}", "error")
         return jsonify({"error": str(e)}), 500  # type: ignore[no-any-return]
 
 

@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Mapping
+from datetime import datetime
 import json
 from pathlib import Path
 import sys
@@ -32,28 +33,56 @@ logger = get_logger("graphflow.main")
 error_manager = ErrorManager()
 
 
+def broadcast_to_frontend(agent: str, message: str, activity_type: str = "info") -> None:
+    """Broadcast activity to frontend via Redis for live monitoring."""
+    try:
+        from src.agentic_crypto_influencer.tools.redis_handler import RedisHandler
+
+        redis_handler = RedisHandler(lazy_connect=True)
+        activity = {
+            "agent": agent,
+            "message": message,
+            "type": activity_type,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        # Store in Redis with expiry for frontend to pick up
+        redis_handler.set("graphflow_activity", json.dumps(activity))
+        logger.debug(f"Broadcasted to frontend: [{agent}] {message}")
+
+    except Exception as e:
+        logger.warning(f"Failed to broadcast to frontend: {e}")
+
+
 async def main() -> None:
     """Main function to run the crypto influencer agent workflow."""
     if not GOOGLE_GENAI_API_KEY:
         error_msg = "GOOGLE_GENAI_API_KEY environment variable is required"
         logger.error(error_msg)
+        broadcast_to_frontend("GraphFlow", f"❌ {error_msg}", "error")
         raise ValueError(error_msg)
 
     logger.info("Starting crypto influencer workflow", extra={"model_id": MODEL_ID})
+    broadcast_to_frontend("GraphFlow", "🚀 Crypto influencer workflow wordt gestart...", "info")
 
     try:
         # Initialize model client
         logger.debug("Initializing OpenAI model client")
+        broadcast_to_frontend(
+            "GraphFlow", "🔧 OpenAI model client wordt geïnitialiseerd...", "info"
+        )
         model_client = OpenAIChatCompletionClient(model=MODEL_ID, api_key=GOOGLE_GENAI_API_KEY)
 
         # Initialize agents
         logger.debug("Initializing agents")
+        broadcast_to_frontend("GraphFlow", "🤖 Agents worden geïnitialiseerd...", "info")
         search_agent = SearchAgent(model_client=model_client)
         summary_agent = SummaryAgent(model_client=model_client)
         publish_agent = PublishAgent(model_client=model_client)
 
         # Build graph
         logger.debug("Building agent graph")
+        broadcast_to_frontend("GraphFlow", "📊 Agent workflow graph wordt gebouwd...", "info")
         builder = DiGraphBuilder()
         builder.add_node(search_agent)
         builder.add_node(summary_agent)
@@ -73,10 +102,12 @@ async def main() -> None:
 
         # Initialize Redis handler
         logger.debug("Initializing Redis handler")
+        broadcast_to_frontend("GraphFlow", "💾 Redis verbinding wordt geïnitialiseerd...", "info")
         redis_handler = RedisHandler(lazy_connect=True)
 
         # Load team_state from Redis if available
         logger.debug("Loading team state from Redis")
+        broadcast_to_frontend("GraphFlow", "📥 Team state wordt geladen vanuit Redis...", "info")
         redis_team_state_bytes = redis_handler.get("team_state")
         redis_team_state: str = (
             redis_team_state_bytes.decode("utf-8") if redis_team_state_bytes else "{}"
@@ -94,6 +125,7 @@ async def main() -> None:
 
         # Run the workflow
         logger.info("Starting workflow execution")
+        broadcast_to_frontend("GraphFlow", "🎯 Workflow uitvoering wordt gestart...", "success")
         stream = flow.run_stream(
             task="Process the latest crypto news and publish a compliant, high-quality tweet to X."
         )
@@ -105,6 +137,10 @@ async def main() -> None:
             # Log detailed event information
             event_type = type(event).__name__
             logger.info(f"Workflow event {event_count} - Type: {event_type}")
+
+            # Broadcast event progress to frontend
+            if event_count % 5 == 0 or event_count < 10:  # Every 5th event or first 10
+                broadcast_to_frontend("GraphFlow", f"📝 Event {event_count}: {event_type}", "info")
 
             # Check for specific event attributes
             if hasattr(event, "source"):
@@ -129,11 +165,15 @@ async def main() -> None:
             ):
                 logger.info("  *** POTENTIAL TWITTER POST EVENT ***")
                 logger.info(f"  Full event: {full_event_str[:500]}")
+                broadcast_to_frontend(
+                    "GraphFlow", "🐦 Twitter post event gedetecteerd!", "warning"
+                )
 
             logger.debug(f"  Full event preview: {full_event_str[:300]}")
 
         # Save state back to Redis
         logger.debug("Saving team state to Redis")
+        broadcast_to_frontend("GraphFlow", "💾 Team state wordt opgeslagen in Redis...", "info")
         team_state = await flow.save_state()
         redis_handler.set("team_state", json.dumps(team_state))
 
@@ -143,6 +183,11 @@ async def main() -> None:
                 "total_events": event_count,
                 "state_saved": True,
             },
+        )
+        broadcast_to_frontend(
+            "GraphFlow",
+            f"✅ Workflow succesvol voltooid! ({event_count} events verwerkt)",
+            "success",
         )
 
     except Exception as e:

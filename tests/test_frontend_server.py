@@ -48,6 +48,18 @@ class TestFrontendServer:
 
         # Check WCAG 2.1 AA compliance elements
         assert b"skip-link" in response.data
+
+    def test_dashboard_oauth_success_message(self, client: Any) -> None:
+        """Test dashboard shows OAuth success message from URL parameters."""
+        response = client.get("/?oauth_success=true")
+        assert response.status_code == 200
+        # The success message should be broadcasted via WebSocket
+
+    def test_dashboard_oauth_error_message(self, client: Any) -> None:
+        """Test dashboard shows OAuth error message from URL parameters."""
+        response = client.get("/?oauth_error=no_code")
+        assert response.status_code == 200
+        # The error message should be broadcasted via WebSocket
         assert b"aria-live" in response.data
         assert b'role="banner"' in response.data
         assert b'role="main"' in response.data
@@ -96,6 +108,19 @@ class TestFrontendServer:
         assert "twitter.com" in data["url"]
         assert "timestamp" in data
 
+    @patch("src.agentic_crypto_influencer.tools.oauth_handler.OAuthHandler")
+    def test_oauth_authorize_redirect(self, mock_oauth_handler: Any, client: Any) -> None:
+        """Test OAuth authorization redirect endpoint."""
+        mock_handler = Mock()
+        mock_handler.get_authorization_url.return_value = (
+            "https://twitter.com/oauth/authorize?code_challenge=test"
+        )
+        mock_oauth_handler.return_value = mock_handler
+
+        response = client.get("/oauth/authorize", follow_redirects=False)
+        assert response.status_code == 302  # Redirect
+        assert "twitter.com" in response.location
+
     def test_redis_status_connected(self, client: Any, mock_redis: Any) -> None:
         """Test Redis status when connected."""
         mock_redis.redis_client = Mock()
@@ -120,7 +145,7 @@ class TestFrontendServer:
         assert "Redis verbinding mislukt" in data["message"]
 
     def test_callback_success(self, client: Any, mock_redis: Any) -> None:
-        """Test successful OAuth callback."""
+        """Test successful OAuth callback redirects to dashboard."""
         mock_redis.get.return_value = "test_code_verifier"
 
         with patch(
@@ -129,21 +154,33 @@ class TestFrontendServer:
             mock_tokens.return_value = True
 
             response = client.get("/callback?code=test_code&state=test_state")
-            assert response.status_code == 200
-            assert b"Autorisatie Voltooid!" in response.data
-            assert b"<script>" in response.data  # Auto-close script
+            assert response.status_code == 302  # Redirect
+            assert "oauth_success=true" in response.location
 
     def test_callback_error(self, client: Any) -> None:
-        """Test OAuth callback with error."""
+        """Test OAuth callback with error redirects to dashboard."""
         response = client.get("/callback?error=access_denied")
-        assert response.status_code == 400
-        assert b"OAuth Error" in response.data
+        assert response.status_code == 302  # Redirect
+        assert "oauth_error=access_denied" in response.location
 
     def test_callback_missing_code(self, client: Any) -> None:
-        """Test callback without authorization code."""
+        """Test callback without authorization code redirects to dashboard."""
         response = client.get("/callback")
-        assert response.status_code == 400
-        assert b"Geen autorisatiecode" in response.data
+        assert response.status_code == 302  # Redirect
+        assert "oauth_error=no_code" in response.location
+
+    def test_callback_token_exchange_failure(self, client: Any, mock_redis: Any) -> None:
+        """Test callback with token exchange failure redirects to dashboard."""
+        mock_redis.get.return_value = "test_code_verifier"
+
+        with patch(
+            "src.agentic_crypto_influencer.tools.frontend_server.get_and_save_tokens"
+        ) as mock_tokens:
+            mock_tokens.return_value = False
+
+            response = client.get("/callback?code=test_code&state=test_state")
+            assert response.status_code == 302  # Redirect
+            assert "oauth_error=token_exchange_failed" in response.location
 
     def test_broadcast_activity(self) -> None:
         """Test activity broadcasting functionality."""
@@ -169,6 +206,33 @@ class TestFrontendServer:
             broadcast_activity(f"Agent{i}", f"Message {i}", "info")
 
         assert len(recent_activities) == MAX_RECENT_ACTIVITIES
+
+    def test_graphflow_activity_forwarding(self, mock_redis: Any) -> None:
+        """Test GraphFlow activity forwarding from Redis."""
+        from src.agentic_crypto_influencer.tools.frontend_server import check_graphflow_activity
+
+        # Mock GraphFlow activity in Redis
+        mock_activity = {
+            "agent": "GraphFlow",
+            "message": "🚀 Test GraphFlow activity",
+            "type": "info",
+            "timestamp": datetime.now().isoformat(),
+        }
+        mock_redis.get.return_value = json.dumps(mock_activity).encode("utf-8")
+
+        # Clear recent activities
+        recent_activities.clear()
+
+        # Check for GraphFlow activity
+        check_graphflow_activity()
+
+        # Verify activity was added
+        assert len(recent_activities) == 1
+        assert recent_activities[0]["agent"] == "GraphFlow"
+        assert "🚀 Test GraphFlow activity" in recent_activities[0]["message"]
+
+        # Verify Redis delete was called to prevent duplication
+        mock_redis.delete.assert_called_with("graphflow_activity")
 
     def test_get_recent_activities_api(self, client: Any) -> None:
         """Test the recent activities API endpoint."""

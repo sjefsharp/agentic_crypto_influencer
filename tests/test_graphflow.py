@@ -299,7 +299,18 @@ class TestGraphflowMain:
 
             # Verify state was saved back to Redis
             mock_flow_instance.save_state.assert_called_once()
-            mock_json.dumps.assert_called_once_with({"state": "data"})
+            # json.dumps is now called multiple times due to broadcast_to_frontend
+            # Check that it was called with the state data at least once
+            from unittest.mock import call
+
+            state_calls = [
+                call_args
+                for call_args in mock_json.dumps.call_args_list
+                if call_args == call({"state": "data"})
+            ]
+            assert len(state_calls) >= 1, (
+                "Expected json.dumps to be called with state data at least once"
+            )
             mock_redis_instance.set.assert_called_once_with("team_state", '{"state": "data"}')
 
     @patch("autogen_agentchat.conditions.TextMentionTermination")

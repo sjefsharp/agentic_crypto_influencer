@@ -705,16 +705,21 @@
       </main>
     </div>
 
+    <!-- Socket.IO CDN -->
+    <script
+      src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+      integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+      crossorigin="anonymous"
+    ></script>
+
     <script>
       // Progressive Enhancement JavaScript
       document.addEventListener("DOMContentLoaded", function () {
         // OAuth Status Check
         checkOAuthStatus();
 
-        // WebSocket for Live Stream (if supported)
-        if (window.WebSocket) {
-          initializeWebSocket();
-        }
+        // Initialize WebSocket/SocketIO for Live Stream
+        initializeWebSocket();
 
         // Periodic status updates
         setInterval(checkSystemStatus, 30000);
@@ -729,73 +734,106 @@
 
             if (data.authorized) {
               statusElement.className = "status status-success";
-              statusElement.textContent =
-                "✅ Geautoriseerd en klaar voor gebruik";
+              let statusText = "✅ Geautoriseerd en klaar voor gebruik";
+
+              // Add expiry information if available
+              if (data.expires_at) {
+                const expiryDate = new Date(data.expires_at * 1000);
+                statusText += ` - Verloopt: ${expiryDate.toLocaleString(
+                  "nl-NL"
+                )}`;
+              }
+
+              statusElement.textContent = statusText;
               btnElement.textContent = "Hernieuw Autorisatie";
             } else {
               statusElement.className = "status status-warning";
-              statusElement.textContent = "⚠️ Autorisatie vereist";
+              statusElement.textContent =
+                data.message || "⚠️ Autorisatie vereist";
               btnElement.textContent = "Autoriseren met X/Twitter";
             }
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error("OAuth status check error:", error);
             const statusElement = document.getElementById("oauth-status");
             statusElement.className = "status status-error";
             statusElement.textContent = "❌ Fout bij controleren autorisatie";
           });
       }
 
+      // Auto-refresh OAuth status every 30 seconds
+      setInterval(checkOAuthStatus, 30000);
+
       function initializeWebSocket() {
-        // WebSocket connection for live agent stream
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebSocket(
-          `${protocol}//${window.location.host}/ws/stream`
-        );
-        const container = document.getElementById("stream-container");
-
-        ws.onopen = function () {
-          addStreamLine({
-            timestamp: new Date().toISOString(),
-            agent: "WebSocket",
-            message: "🔌 Real-time verbinding actief",
-            type: "success",
-          });
-        };
-
-        ws.onmessage = function (event) {
+        // Initialize SocketIO connection with better error handling
+        if (typeof io !== "undefined") {
           try {
-            const data = JSON.parse(event.data);
-            addStreamLine(data);
-          } catch (e) {
-            console.error("WebSocket message parsing error:", e);
+            console.log("Initializing Socket.IO connection...");
+            const socket = io("/stream", {
+              transports: ["websocket", "polling"],
+              timeout: 20000,
+              forceNew: true,
+            });
+
+            socket.on("connect", function () {
+              console.log("Socket.IO connected");
+              addStreamLine({
+                timestamp: new Date().toISOString(),
+                agent: "System",
+                message: "� Socket.IO live verbinding actief",
+                type: "success",
+              });
+            });
+
+            socket.on("disconnect", function () {
+              console.log("Socket.IO disconnected");
+              addStreamLine({
+                timestamp: new Date().toISOString(),
+                agent: "System",
+                message: "🔌 Socket.IO verbinding verbroken - polling gebruikt",
+                type: "warning",
+              });
+            });
+
+            socket.on("agent_activity", function (data) {
+              console.log("Received Socket.IO activity:", data);
+              addStreamLine(data);
+            });
+
+            socket.on("connect_error", function (error) {
+              console.error("Socket.IO connection error:", error);
+              addStreamLine({
+                timestamp: new Date().toISOString(),
+                agent: "System",
+                message: "⚠️ Socket.IO fout - polling gebruikt",
+                type: "warning",
+              });
+              // Start polling as fallback
+              startPolling();
+            });
+
+            // Store socket reference for cleanup
+            window.socketConnection = socket;
+          } catch (error) {
+            console.error("Failed to initialize Socket.IO:", error);
+            addStreamLine({
+              timestamp: new Date().toISOString(),
+              agent: "System",
+              message: "❌ Socket.IO initialisatie mislukt - polling gebruikt",
+              type: "error",
+            });
+            startPolling();
           }
-        };
-
-        ws.onerror = function () {
+        } else {
+          console.warn("Socket.IO library not loaded, using polling fallback");
           addStreamLine({
             timestamp: new Date().toISOString(),
-            agent: "WebSocket",
-            message: "❌ Verbinding verloren - terugvallen op polling",
-            type: "warning",
-          });
-
-          // Fallback to polling
-          startPolling();
-        };
-
-        ws.onclose = function () {
-          addStreamLine({
-            timestamp: new Date().toISOString(),
-            agent: "WebSocket",
-            message: "🔌 Verbinding gesloten - terugvallen op polling",
+            agent: "System",
+            message: "📡 Socket.IO niet beschikbaar - polling gebruikt",
             type: "info",
           });
-
-          // Fallback to polling
           startPolling();
-        };
-
-        return ws;
+        }
       }
 
       function startPolling() {
@@ -888,27 +926,12 @@
           });
       }
 
-      // Authorization button handler
+      // Authorization button handler - Safari-friendly redirect instead of popup
       document
         .getElementById("authorize-btn")
         .addEventListener("click", function () {
-          fetch("/api/oauth/url")
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.url) {
-                // Open in new window for better UX
-                window.open(data.url, "oauth", "width=500,height=700");
-
-                // Listen for completion
-                const checkInterval = setInterval(() => {
-                  checkOAuthStatus();
-                }, 2000);
-
-                // Stop checking after 5 minutes
-                setTimeout(() => clearInterval(checkInterval), 300000);
-              }
-            })
-            .catch(console.error);
+          // Direct redirect to OAuth authorization endpoint
+          window.location.href = "/oauth/authorize";
         });
 
       // GraphFlow Control Functions
