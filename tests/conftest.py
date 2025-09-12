@@ -9,7 +9,7 @@ import tempfile
 import pytest
 
 
-@pytest.fixture  # type: ignore[misc](scope="session")
+@pytest.fixture(scope="session")  # type: ignore[misc]
 def temp_dir() -> Generator[Path]:
     """Create a temporary directory for the entire test session."""
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -48,7 +48,7 @@ def mock_api_response() -> dict[str, str | dict[str, float | int | str]]:
     }
 
 
-@pytest.fixture  # type: ignore[misc](autouse=True)
+@pytest.fixture(autouse=True)  # type: ignore[misc]
 def setup_test_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Setup test environment with temporary paths and mocked external dependencies."""
     # Mock environment variables for testing

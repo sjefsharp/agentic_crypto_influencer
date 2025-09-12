@@ -429,7 +429,7 @@ def test_get_circuit_breaker_status(error_manager: ErrorManager) -> None:
 def test_call_with_circuit_breaker_success(error_manager: ErrorManager) -> None:
     """Test successful call with circuit breaker."""
 
-    def test_function():
+    def test_function() -> str:
         return "success"
 
     result = error_manager.call_with_circuit_breaker("test_service_success", test_function)
@@ -441,7 +441,7 @@ def test_call_with_circuit_breaker_success(error_manager: ErrorManager) -> None:
 def test_call_with_circuit_breaker_failure(error_manager: ErrorManager) -> None:
     """Test failed call with circuit breaker."""
 
-    def failing_function():
+    def failing_function() -> None:
         raise ValueError("Test failure")
 
     with pytest.raises(ValueError, match="Test failure"):
