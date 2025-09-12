@@ -196,6 +196,20 @@ class TestFrontendServer:
         assert activity["type"] == "info"
         assert "timestamp" in activity
 
+    def test_broadcast_activity_chat_type(self) -> None:
+        """Test activity broadcasting with chat type."""
+        # Clear recent activities
+        recent_activities.clear()
+
+        broadcast_activity("SearchAgent", "💬 Found crypto news about Bitcoin", "chat")
+
+        assert len(recent_activities) == 1
+        activity = recent_activities[0]
+        assert activity["agent"] == "SearchAgent"
+        assert activity["message"] == "💬 Found crypto news about Bitcoin"
+        assert activity["type"] == "chat"
+        assert "timestamp" in activity
+
     def test_recent_activities_limit(self) -> None:
         """Test that recent activities are limited to MAX_RECENT_ACTIVITIES."""
         from src.agentic_crypto_influencer.config.frontend_constants import MAX_RECENT_ACTIVITIES

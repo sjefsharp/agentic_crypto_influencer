@@ -54,6 +54,152 @@ def broadcast_to_frontend(agent: str, message: str, activity_type: str = "info")
         logger.warning(f"Failed to broadcast to frontend: {e}")
 
 
+async def process_agent_conversations(event: Any, event_count: int) -> None:
+    """Extract and broadcast detailed agent conversations from events."""
+    try:
+        # Check for messages in the event
+        event_messages = getattr(event, "messages", None)
+        if event_messages:
+            for msg_idx, message in enumerate(event_messages[-3:]):  # Last 3 messages
+                formatted_message = format_agent_message(message, event_count, msg_idx)
+                if formatted_message:
+                    broadcast_to_frontend(
+                        formatted_message["agent"],
+                        formatted_message["content"],
+                        formatted_message["type"],
+                    )
+
+        # Check for content in the event
+        event_content = getattr(event, "content", None)
+        if event_content:
+            # Try to extract agent information
+            agent_name = "Agent"
+            event_source = getattr(event, "source", None)
+            if event_source:
+                agent_name = str(event_source)
+
+            content_str = str(event_content)
+            if len(content_str) > 50:  # Only broadcast substantial content
+                broadcast_to_frontend(
+                    agent_name,
+                    f"💬 {content_str[:500]}{'...' if len(content_str) > 500 else ''}",
+                    "chat",
+                )
+                return  # Content was processed, no need to check data
+
+        # Check for data/results only if no content was processed
+        event_data = getattr(event, "data", None)
+        if event_data:
+            data_str = str(event_data)
+            if "error" in data_str.lower():
+                broadcast_to_frontend("System", f"❌ Error: {data_str[:300]}", "error")
+            elif len(data_str) > 30:
+                broadcast_to_frontend("System", f"📊 Data: {data_str[:300]}", "info")
+
+    except Exception as e:
+        logger.debug(f"Could not process agent conversations: {e}")
+
+
+def format_agent_message(message: Any, event_count: int, msg_idx: int) -> dict[str, str] | None:
+    """Format an agent message for frontend display."""
+    try:
+        message_str = str(message)
+
+        # Extract agent name from message if possible
+        agent_name = "Agent"
+        message_name = getattr(message, "name", None)
+        message_role = getattr(message, "role", None)
+
+        if message_name:
+            agent_name = str(message_name)
+        elif message_role:
+            agent_name = f"Agent ({message_role})"
+        elif "name=" in message_str:
+            # Try to extract name from string representation
+            import re
+
+            name_match = re.search(r"name='([^']+)'", message_str)
+            if name_match:
+                agent_name = name_match.group(1)
+
+        # Extract content
+        content = ""
+        message_content = getattr(message, "content", None)
+        message_text = getattr(message, "text", None)
+
+        if message_content:
+            content = str(message_content)
+        elif message_text:
+            content = str(message_text)
+        else:
+            content = message_str
+
+        # Skip empty or very short messages
+        if len(content.strip()) < 10:
+            return None
+
+        # Determine message type
+        msg_type = "chat"
+        content_lower = content.lower()
+        if "error" in content_lower:
+            msg_type = "error"
+        elif any(
+            keyword in content_lower
+            for keyword in ["tweet", "post", "publish", "twitter", "x.com"]
+        ):
+            msg_type = "success"
+        elif "function" in message_str.lower() or "tool" in message_str.lower():
+            msg_type = "info"
+
+        return {
+            "agent": agent_name,
+            "content": (
+                f"💭 [{event_count}.{msg_idx}] {content[:1000]}"
+                f"{'...' if len(content) > 1000 else ''}"
+            ),
+            "type": msg_type,
+        }
+
+    except Exception as e:
+        logger.debug(f"Could not format message: {e}")
+        return None
+
+
+async def check_for_twitter_success(event: Any, event_str: str) -> bool:
+    """Check if the event indicates successful Twitter posting."""
+    try:
+        success_indicators = [
+            "successfully posted",
+            "tweet posted",
+            "published to twitter",
+            "posted to x",
+            "tweet id:",
+            "status_code: 201",
+            "tweet created",
+            "post successful",
+        ]
+
+        event_lower = event_str.lower()
+        for indicator in success_indicators:
+            if indicator in event_lower:
+                logger.info(f"Twitter success detected: {indicator}")
+                return True
+
+        # Check if we have a successful response structure
+        event_data = getattr(event, "data", None)
+        if event_data:
+            data_str = str(event_data).lower()
+            if any(indicator in data_str for indicator in success_indicators):
+                logger.info("Twitter success detected in event data")
+                return True
+
+        return False
+
+    except Exception as e:
+        logger.debug(f"Error checking Twitter success: {e}")
+        return False
+
+
 async def main() -> None:
     """Main function to run the crypto influencer agent workflow."""
     if not GOOGLE_GENAI_API_KEY:
@@ -142,31 +288,27 @@ async def main() -> None:
             if event_count % 5 == 0 or event_count < 10:  # Every 5th event or first 10
                 broadcast_to_frontend("GraphFlow", f"📝 Event {event_count}: {event_type}", "info")
 
-            # Check for specific event attributes
-            if hasattr(event, "source"):
-                logger.info(f"  Source: {event.source}")
-            if hasattr(event, "target"):
-                logger.info(f"  Target: {event.target}")
-            if hasattr(event, "data"):
-                logger.info(f"  Data: {event.data}")
-            if hasattr(event, "messages") and event.messages:
-                logger.info(f"  Messages ({len(event.messages)}):")
-                for i, msg in enumerate(event.messages[-3:]):  # Last 3 messages
-                    logger.info(f"    {i}: {str(msg)[:200]}")
-            if hasattr(event, "content"):
-                logger.info(f"  Content: {event.content}")
+            # Extract and broadcast detailed agent conversations
+            await process_agent_conversations(event, event_count)
 
-            # Log full event for debugging (truncated)
+            # Check for specific event attributes and log them
+            event_source = getattr(event, "source", None)
+            event_target = getattr(event, "target", None)
+
+            if event_source:
+                logger.info(f"  Source: {event_source}")
+                if event_target:
+                    logger.info(f"  Target: {event_target}")
+                    # Broadcast agent communication
+                    broadcast_to_frontend(
+                        "Communication", f"🔄 {event_source} → {event_target}", "info"
+                    )
+
+            # Check for Twitter/X post success
             full_event_str = str(event)
-            if (
-                "post" in full_event_str.lower()
-                or "twitter" in full_event_str.lower()
-                or "x.com" in full_event_str.lower()
-            ):
-                logger.info("  *** POTENTIAL TWITTER POST EVENT ***")
-                logger.info(f"  Full event: {full_event_str[:500]}")
+            if await check_for_twitter_success(event, full_event_str):
                 broadcast_to_frontend(
-                    "GraphFlow", "🐦 Twitter post event gedetecteerd!", "warning"
+                    "Twitter", "🎉 Tweet succesvol geplaatst op X/Twitter!", "success"
                 )
 
             logger.debug(f"  Full event preview: {full_event_str[:300]}")

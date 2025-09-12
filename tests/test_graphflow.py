@@ -4,7 +4,12 @@ from contextlib import suppress
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from src.agentic_crypto_influencer.graphflow.graphflow import main
+from src.agentic_crypto_influencer.graphflow.graphflow import (
+    check_for_twitter_success,
+    format_agent_message,
+    main,
+    process_agent_conversations,
+)
 
 
 class TestGraphflowMain:
@@ -389,3 +394,194 @@ class TestGraphflowMain:
             # Check that workflow events were logged correctly
             mock_logger.info.assert_any_call("Workflow event 1 - Type: str")
             mock_logger.info.assert_any_call("Workflow event 2 - Type: str")
+
+
+class TestAgentConversationProcessing:
+    """Test agent conversation processing functions."""
+
+    def test_format_agent_message_with_name(self) -> None:
+        """Test formatting agent message with name attribute."""
+        mock_message = Mock()
+        mock_message.name = "SearchAgent"
+        mock_message.content = "I found some crypto news about Bitcoin reaching new highs."
+
+        result = format_agent_message(mock_message, 1, 0)
+
+        assert result is not None
+        assert result["agent"] == "SearchAgent"
+        assert "💭 [1.0]" in result["content"]
+        assert "crypto news" in result["content"]
+        assert result["type"] == "chat"
+
+    def test_format_agent_message_with_role(self) -> None:
+        """Test formatting agent message with role attribute."""
+        mock_message = Mock()
+        mock_message.name = None
+        mock_message.role = "assistant"
+        mock_message.content = "Tweet posted successfully with ID: 123456789"
+
+        result = format_agent_message(mock_message, 2, 1)
+
+        assert result is not None
+        assert result["agent"] == "Agent (assistant)"
+        assert "💭 [2.1]" in result["content"]
+        assert "Tweet posted" in result["content"]
+        assert result["type"] == "success"  # Should detect tweet keywords
+
+    def test_format_agent_message_error_content(self) -> None:
+        """Test formatting agent message with error content."""
+        mock_message = Mock()
+        mock_message.name = "PublishAgent"
+        mock_message.content = "Error: Failed to authenticate with Twitter API"
+
+        result = format_agent_message(mock_message, 3, 0)
+
+        assert result is not None
+        assert result["agent"] == "PublishAgent"
+        assert result["type"] == "error"
+        assert "Error:" in result["content"]
+
+    def test_format_agent_message_short_content(self) -> None:
+        """Test that short messages are filtered out."""
+        mock_message = Mock()
+        mock_message.name = "Agent"
+        mock_message.content = "OK"
+
+        result = format_agent_message(mock_message, 1, 0)
+
+        assert result is None  # Should be filtered out
+
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.broadcast_to_frontend")
+    def test_process_agent_conversations_with_messages(self, mock_broadcast: Mock) -> None:
+        """Test processing event with messages."""
+
+        async def run_test() -> None:
+            mock_event = Mock()
+
+            # Create mock messages
+            mock_msg1 = Mock()
+            mock_msg1.name = "SearchAgent"
+            mock_msg1.content = "Found trending crypto news about Ethereum"
+
+            mock_msg2 = Mock()
+            mock_msg2.name = "SummaryAgent"
+            mock_msg2.content = "Summarized the crypto news into key points"
+
+            mock_event.messages = [mock_msg1, mock_msg2]
+
+            await process_agent_conversations(mock_event, 1)
+
+            # Should broadcast both messages
+            assert mock_broadcast.call_count >= 2
+
+            # Check that SearchAgent message was broadcasted
+            search_calls = [
+                call for call in mock_broadcast.call_args_list if call[0][0] == "SearchAgent"
+            ]
+            assert len(search_calls) >= 1
+
+            # Check that SummaryAgent message was broadcasted
+            summary_calls = [
+                call for call in mock_broadcast.call_args_list if call[0][0] == "SummaryAgent"
+            ]
+            assert len(summary_calls) >= 1
+
+        asyncio.run(run_test())
+
+    @patch("src.agentic_crypto_influencer.graphflow.graphflow.broadcast_to_frontend")
+    def test_process_agent_conversations_with_content(self, mock_broadcast: Mock) -> None:
+        """Test processing event with content."""
+
+        async def run_test() -> None:
+            # Create a simple object with only the attributes we want
+            class MockEvent:
+                def __init__(self) -> None:
+                    self.content = (
+                        "This is substantial content from an agent workflow "
+                        "that is definitely longer than 50 characters."
+                    )
+                    self.source = "WorkflowAgent"
+                    # No messages or data attributes
+
+            mock_event = MockEvent()
+
+            # Verify the content length is correct
+            assert len(mock_event.content) > 50
+
+            await process_agent_conversations(mock_event, 2)
+
+            # Should broadcast the content
+            assert mock_broadcast.call_count > 0, (
+                f"Expected broadcast_to_frontend to be called, but it wasn't. "
+                f"Content length: {len(mock_event.content)}"
+            )
+
+            # Check the call
+            call_args = mock_broadcast.call_args[0]
+            assert call_args[0] == "WorkflowAgent"
+            assert "💬" in call_args[1]
+            assert "substantial content" in call_args[1]
+            assert call_args[2] == "chat"
+
+        asyncio.run(run_test())
+
+
+class TestTwitterSuccessDetection:
+    """Test Twitter success detection functionality."""
+
+    def test_check_for_twitter_success_positive(self) -> None:
+        """Test detection of successful Twitter posting."""
+
+        async def run_test() -> None:
+            mock_event = Mock()
+            event_str = "Response: Tweet posted successfully with ID: 1234567890"
+
+            result = await check_for_twitter_success(mock_event, event_str)
+
+            assert result is True
+
+        asyncio.run(run_test())
+
+    def test_check_for_twitter_success_in_data(self) -> None:
+        """Test detection of success in event data."""
+
+        async def run_test() -> None:
+            mock_event = Mock()
+            mock_event.data = "status_code: 201, tweet created successfully"
+            event_str = "Some other content"
+
+            result = await check_for_twitter_success(mock_event, event_str)
+
+            assert result is True
+
+        asyncio.run(run_test())
+
+    def test_check_for_twitter_success_negative(self) -> None:
+        """Test no false positives for non-success events."""
+
+        async def run_test() -> None:
+            mock_event = Mock()
+            mock_event.data = None
+            event_str = "Processing crypto news, analyzing trends"
+
+            result = await check_for_twitter_success(mock_event, event_str)
+
+            assert result is False
+
+        asyncio.run(run_test())
+
+    def test_check_for_twitter_success_with_error(self) -> None:
+        """Test that errors in success detection are handled gracefully."""
+
+        async def run_test() -> None:
+            mock_event = Mock()
+            # Make event.data raise an exception when accessed
+            type(mock_event).data = Mock(side_effect=Exception("Test error"))
+            event_str = "some content"
+
+            result = await check_for_twitter_success(mock_event, event_str)
+
+            # Should not raise, should return False
+            assert result is False
+
+        asyncio.run(run_test())

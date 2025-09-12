@@ -386,6 +386,8 @@ def broadcast_activity(agent: str, message: str, activity_type: str = "info") ->
         logger.warning(log_message)
     elif activity_type == "success":
         logger.info(f"✅ {log_message}")
+    elif activity_type == "chat":
+        logger.info(f"💬 {log_message}")
     else:
         logger.info(log_message)
 
