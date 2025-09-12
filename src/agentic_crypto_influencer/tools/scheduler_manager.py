@@ -399,7 +399,7 @@ class SchedulerManager:
         try:
             # Wait for process to complete
             result = self.graphflow_process.communicate(timeout=GRAPHFLOW_TIMEOUT_SECONDS)
-            stdout, stderr = (
+            _stdout, stderr = (
                 result if isinstance(result, tuple) and len(result) == 2 else (None, None)
             )
 
